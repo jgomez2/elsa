@@ -1,0 +1,5 @@
+{
+	ch->SetAlias("psd","(nph-nsg)/nph");
+	TCut g1="psd<0.1 && detector_id2==2");
+	TCut g2="psd<0.1 && detector_id2==3");
+}

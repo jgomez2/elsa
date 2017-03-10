@@ -1,0 +1,28 @@
+#!/bin/bash
+cd /home/daq/caen_test_code/elsa
+curRunNum=$1
+maxRunNum=99998;
+subDir="licf16/"
+zero=
+
+while [ "$curRunNum" -lt "$((maxRunNum+1))" ]; do
+  echo $curRunNum
+  runCheck=$((curRunNum+1))
+  if [ -e "/home/daq/caen_test_code/elsa/data/"$subDir"run"$zero""$runCheck".bin" ]
+  then
+    echo -e "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+    echo -e "* * * * * * * * * ./licf_replay.py $curRunNum * * * * * * *"
+    echo -e "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+    ./licf_replay.py $curRunNum
+    mv ./stage1/incubate/run"$curRunNum"_s1.root ./stage1/
+    
+    runDel=$((curRunNum-4))
+    rm -rf "/home/daq/caen_test_code/elsa/data/"$subDir"run"$zero""$runDel".bin"
+    rm -rf "/home/daq/caen_test_code/elsa/stage0/run"$zero""$runDel"_s0.bin"
+    curRunNum=$((curRunNum + 1))
+  else
+    echo "/home/daq/caen_test_code/elsa/data/"$subDir"run"$zero""$runCheck".bin not ready"
+    echo "sleeping 1 hour till more files processed...zzz..."
+    sleep 3600
+  fi
+done 

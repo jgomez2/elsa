@@ -1,0 +1,149 @@
+TChain* makeChain_pk_BGO_5NE213()
+{
+    TChain *pt = new TChain("tree");
+    char buf[1000];
+    for (Int_t i=613;i<620+1;++i) // NDSE runs with 1 BGO and 5 liquid scint
+    {
+        if (1)
+        {
+            sprintf(buf,"./stage1/run%05i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+    return pt;
+}
+
+TChain* makeChain_pk()
+{
+    TChain *pt = new TChain("tree");
+    char buf[1000];
+    for (Int_t i=511;i<515+1;++i) // NDSE runs with 2 LaBr
+    {
+        if (1)
+        {
+            sprintf(buf,"./stage1/run%05i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+    return pt;
+}
+
+TChain* makeChain_pk_liquid()
+{
+    TChain *pt = new TChain("tree");
+    char buf[1000];
+    for (Int_t i=524;i<526+1;++i) // NDSE runs with 1 NE213 and 2 LaBr
+    {
+        if (1)
+        {
+            sprintf(buf,"./stage1/run%05i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+    return pt;
+}
+
+TChain* makeChain_pk_liquid_extsource()
+{
+    TChain *pt = new TChain("tree");
+    char buf[1000];
+    for (Int_t i=530;i<536+1;++i) // NDSE runs with 1 ND213 and 2 LaBr, AmBe external to B-poly 
+    {
+        if (1)
+        {
+            sprintf(buf,"./stage1/run%05i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+    return pt;
+}
+
+TChain* makeChain_lenz()
+{
+    TChain *pt = new TChain("tree");
+    char buf[1000];
+    for (Int_t i=13679;i<13688+1;++i) // chi-nu first run period
+    {
+        if (1)
+        {
+            sprintf(buf,"./stage1_lenz/run%i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+    return pt;
+}
+
+TChain* makeChain()
+{
+    TChain *pt = new TChain("tree");
+    char buf[1000];
+    for (Int_t i=19150;i<19222+1;++i) // chi-nu first run period
+    for (Int_t i=19582;i<19638+1;++i) // chi-nu first run period
+    {
+        if (1)
+        {
+            sprintf(buf,"./stage1/run%i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+    return pt;
+}
+
+TChain* makeChain_pu239_jan2015()
+{
+    TChain *pt = new TChain("tree");
+    char buf[1000];
+    /*
+    for (Int_t i=18373;i<18410+1;++i) // chi-nu first run period
+    {
+        if (1)
+        {
+            sprintf(buf,"./chinu-stage1/run%i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+
+    for (Int_t i=18418;i<18447+1;++i) // chi-nu first run period
+    {
+        if (1)
+        {
+            sprintf(buf,"./chinu-stage1/run%i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+    */
+
+    for (Int_t i=18460;i<18481+1;++i) // chi-nu first run period
+    {
+        if (1)
+        {
+            sprintf(buf,"./stage1-chinu/run%i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+
+    for (Int_t i=18482;i<18562+1;++i) // chi-nu first run period
+    {
+        if (1)
+        {
+            sprintf(buf,"./stage1-chinu/run%i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+    return pt;
+}
+
+TChain* makeChain_pu239_dec2015()
+{
+    TChain *pt = new TChain("tree");
+    char buf[1000];
+    for (Int_t i=20557;i<20577+1;++i) // chi-nu first run period
+    {
+        if (1)
+        {
+            sprintf(buf,"./stage1-chinu/run%i_s1.root",i);
+            pt->Add(buf);
+        }
+    }
+    return pt;
+}

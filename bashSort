@@ -1,0 +1,13 @@
+#!/bin/bash
+echo -n "Enter start run number: "
+read curRunNum;
+echo -n "Enter end run number: "
+read endRunNum;
+
+while [ "$curRunNum" -lt "$((endRunNum+1))" ]; do
+  echo -e "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+  echo -e "* * * * * * * * * ./licf_replay.py $curRunNum * * * * * * *"
+  echo -e "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
+  ./licf_replay.py $curRunNum
+  curRunNum=$((curRunNum + 1))
+done 
