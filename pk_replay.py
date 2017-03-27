@@ -60,7 +60,7 @@ if __name__=='__main__':
     testclass.dtype = 4
     #elsa.run_elsa(testclass)
     """
-    
+
     # multithreaded "production-like" testing for stage 0
     #rnums = range(19150,19222+1) # 235U 1st run period 2015
     #rnums = range(19582,19638+1) # 235U 2nd run period 2015
@@ -72,7 +72,7 @@ if __name__=='__main__':
     runstart = int(sys.argv[1])
     runend = int(sys.argv[2])
     rnums = range(runstart,runend+1)
-
+    
     args = []
     for rnum in rnums:
         testclass = elsa.Elsa()
@@ -103,10 +103,10 @@ if __name__=='__main__':
         basepath = './data/'
         ifname = '%s/run%05d.bin.gz'%(basepath,rnum)
         #ifname = '%s/run%05d.bin'%(basepath,rnum)
-        ofname = './stage0/run%05d_s0_2ms.bin'%(rnum)
+        ofname = './stage0/run%05d_s0_ambe2ms.bin'%(rnum)
         testclass.ifname = ifname
         testclass.ofname = ofname
-        testclass.STOPatEVENT = 1e9
+        testclass.STOPatEVENT = 10000000000
 
         testclass.dtype = 6
         testclass.interp_slope = -1.0
@@ -118,7 +118,7 @@ if __name__=='__main__':
         args.append(testclass)
     elsa.run_multithread_elsa(args,2)
     
-    
+     
     # multithreaded "production-like" testing for stage 1
     #rnums = range(19150,19222+1) # 1st run period 
     #rnums = range(19194,19222+1)
@@ -127,7 +127,7 @@ if __name__=='__main__':
     #rnums = range(20557,20668+1) # dec 2015 pu239 run
     #rnums = range(20557,20564+1) # dec 2015 pu239 run
     #rnums = elsa.read_runlist('./runs/2015_ligl_u235.txt')
-    rnums = range(runstart,runend+1)
+
     args = []
     for rnum in rnums:
         testclass = elsa.Elsa()
@@ -164,16 +164,16 @@ if __name__=='__main__':
         for i in liglrange:
             testclass.detclass[i] = 2 # call ligls class 2
 
-        ifname = './stage0/run%05d_s0_2ms.bin'%(rnum)
-        ofname = './stage1/run%05d_s1_2ms.root'%(rnum)
+        ifname = './stage0/run%05d_s0_ambe2ms.bin'%(rnum)
+        ofname = './stage1/run%05d_s1_ambe2ms.root'%(rnum)
         ohfname = './stage1h/run%05d.root'%(rnum)
         testclass.ifname = ifname
         testclass.ofname = ofname
         testclass.ohfname = ohfname
-        testclass.STOPatEVENT = 1e9
+        testclass.STOPatEVENT = 10000000000
 
         testclass.t0ebuild = 0
-        testclass.ebuild = 1
+        testclass.ebuild = 6
         testclass.extra_option = 0
         testclass.dtype = 4
         testclass.dump1r = 1
