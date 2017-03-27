@@ -107,6 +107,7 @@ class Elsa:
                         # 3 = build mona style events
                         # 4 = build rpi style events
                         # 5 = build lenz style events
+                        # 6 = build ndse style events
         self.t0ebuild = 0 # whether to consider t0s as part of event build
                           # 0 = no
                           # 1 = yes
@@ -247,6 +248,9 @@ def run_elsa(args):
     elif args.ebuild == 5:
         print 'running in lenz'
         args.eroot.build_events_lenz()
+    elif args.ebuild == 6:
+        print 'running in ndse'
+        args.eroot.build_events_ndse(args.t0ebuild)
 
 
 def run_multithread_elsa(arglist,ncpu):
