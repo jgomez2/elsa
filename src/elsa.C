@@ -96,6 +96,7 @@ class elsa_root {
         Int_t build_events_dance(Int_t t0ebuild);
         Int_t build_events_mona(Int_t t0ebuild);
         Int_t build_events_lenz();
+        Int_t build_events_ndse(Int_t t0ebuild);
 
         Int_t locate_good_indices(int *i, int *j, Double_t coincwin, int class1, int class2);
         Int_t locate_t0i(int *t0i,int *i,int t0class,int class1);
@@ -970,10 +971,10 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
     Double_t ppactime;;
     TTree *otree;
     TFile *ohfile;
-    Double_t coincwin_lo = -500.0;
-    Double_t coincwin_hi = 1700.0;
-    
-    
+    Double_t coincwin_lo = -2000000.0;
+    Double_t coincwin_hi = 2000000.0;
+
+
     printf("dump1r %i dump1h %i\n",dump1r,dump1h);
     if (dump1r)
     {
@@ -991,11 +992,11 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
     }
     #include "RootStuff/Hist_S1CHINU_Define.C"
     if (dump1h)
-    {
+      {
         printf("opening root histo file %s\n",ohpath->Data());
         ohfile = new TFile(ohpath->Data(),"recreate");
         #include "RootStuff/Hist_S1CHINU_Create.C"
-    }
+      }
     
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
@@ -1019,6 +1020,205 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
       return -2;
     }
 
+    while (true)
+    {
+        if (i>(int)ebanks[class1].size()-1)
+        {
+            break;
+        }
+        // looking for a good t0
+        if (t0ebuild)
+        {
+            locate_t0i(&t0i,&i,t0class,class1);
+            t0time = ebanks[t0class][t0i].time;
+            ppactime = ebanks[class1][i].time;
+            t0tof = ppactime-t0time;
+            //t0tof_wrapped = ((100000.*(t0tof-0.0)%(100000*1788.819875776))/100000.);
+            t0tof_wrapped = fmod(t0tof,1788.819875776);
+        }
+
+	// loop for neutron detectors
+        while (true)
+        {
+            if (j>(int)ebanks[class2].size()-1)
+            {
+                break;
+            }
+	    
+	    Double_t deltat = ebanks[class2][j].time - ebanks[class1][i].time;
+            if (deltat < coincwin_lo) // outside low bound of coinc win
+            {
+                j += 1;
+                continue;
+            } else if (deltat > coincwin_lo && deltat < coincwin_hi) // inside the coincidence window
+            {
+                detid1 = ebanks[class1][i].detector_id;
+                detid2 = ebanks[class2][j].detector_id;
+                tof = deltat;
+                pph = ebanks[class1][i].integral[1];
+                nsg = ebanks[class2][j].integral[0];
+                nph = ebanks[class2][j].integral[1];
+                if (dump1r)
+                {
+                    otree->Fill();
+                }
+                if (dump1h)
+                {
+                    if (pph>threshold[detid1]&&pph<saturate[detid1]&&nph>threshold[detid2]&&nph<saturate[detid2])
+                    {
+                      if (t0tof<((Double_t)t0ds)*1.3*1800.0)
+                      {
+                        #include "RootStuff/Hist_S1CHINU_Fill.C"
+                      }
+                    }
+                }
+                j += 1;
+            } else // outside of upper boundary of coincidence window
+            {
+                locate_good_indices(&i,&j,coincwin_lo,class1,class2);
+                break;
+            }
+        }
+        i+=1;
+        if ((j>(int)ebanks[class2].size()-1) && (i>(int)ebanks[class1].size()-1))
+        {
+            break;
+        }
+        //printf("end of i loop %d of %d\n",i,ebanks[class1].size());
+    }
+
+    
+    if (dump1r)
+    {
+      otree->Write();
+      orfile->Close();
+    }
+    if (dump1h)
+    {
+     #include "RootStuff/Hist_S1CHINU_Write.C"
+        ohfile->Close();
+    }
+
+    return 0;
+}
+
+
+Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
+{
+    Int_t detid1;
+    Int_t detid2;
+    Double_t t0tof;
+    Double_t t0tof_wrapped;
+    Double_t tof;
+    Double_t pph;
+    Double_t nph;
+    Double_t nsg;
+    Double_t t0time;
+    Double_t ppactime;;
+    TTree *otree;
+    TFile *ohfile;
+    Double_t coincwin_lo = -2000000.0;
+    Double_t coincwin_hi = 2000000.0;
+
+    //HISTOS FOR NDSE
+    TH1D *liqdeadtime[10];
+    TH1D *bgodeadtime[1];
+    double lasttime[10];
+    double blasttime[1];
+    double singlelasttime;
+    int lastdet;
+    TH1D* liqbackground[10];//THIS LINE WILL BE USEFUL LATER
+    TH1D* bgobackground[10];//THIS LINE WILL ALSO BE USEFUL LATER
+    TH1D* rossialpha_liquid[10];
+    TH1D* psdliquid2 = new TH1D("psd","psd",1000,0,.3);
+    TH1D* shortraliquid;
+    double ralasttime[10];
+    //END OF NDSE PACIFIC STUFF
+
+
+    printf("dump1r %i dump1h %i\n",dump1r,dump1h);
+    if (dump1r)
+    {
+        orfile = new TFile(opath->Data(),"recreate");
+        otree = new TTree("tree","tree");
+        otree->Branch("detector_id1",&detid1);
+        otree->Branch("detector_id2",&detid2);
+        otree->Branch("t0tof",&t0tof);
+        otree->Branch("ntof",&tof);
+        otree->Branch("t0t",&t0time);
+        otree->Branch("ppt",&ppactime);
+        otree->Branch("pph",&pph);
+        otree->Branch("nsg",&nsg);
+        otree->Branch("nph",&nph);
+	for (int iter=0;iter<10;iter++)
+	  {
+	    if (iter<1)
+	      {
+		char btitle[128];
+		sprintf(btitle,"DeadTime_BGO%02i",iter);
+		bgodeadtime[iter]=new TH1D(btitle,btitle,300000,0,coincwin_hi);
+		
+		char bgotitle[128];
+		sprintf(bgotitle,"td1_05_back_sngl_ppac%02i",iter+1);
+		bgobackground[iter]=new TH1D(bgotitle,bgotitle,150000,0,coincwin_hi);
+	      }
+	    if(iter>=2 && iter<9)
+	      {
+		char title[128];
+		sprintf(title,"DeadTime_Liquid%02i",iter);
+		liqdeadtime[iter]=new TH1D(title,title,300000,0,coincwin_hi);
+		
+		//background histograms must have same bin width as the final histograms
+		char bgtitle[128];
+		sprintf(bgtitle,"td1_05_back_sngl_ligl%02i",iter);
+		liqbackground[iter]=new TH1D(bgtitle,bgtitle,450000,coincwin_lo,2*coincwin_hi);
+
+		//rossi alpha histograms
+		char ratitle[128];
+		sprintf(ratitle,"RossiAlpha_liquid%02i",iter);
+		rossialpha_liquid[iter]=new TH1D(ratitle,ratitle,2000050,-50,coincwin_hi);
+	      }
+	  }
+	shortraliquid=new TH1D("ShortTimeRossiAlpha_AllLiquids","ShortTimeRossiAlpha_AllLiquids",2000050,-50,coincwin_hi);
+    }
+    #include "RootStuff/Hist_S1CHINU_Define.C"
+    if (dump1h)
+    {
+        printf("opening root histo file %s\n",ohpath->Data());
+        ohfile = new TFile(ohpath->Data(),"recreate");
+        #include "RootStuff/Hist_S1CHINU_Create.C"
+    }
+    
+    // sort everyone first
+    std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
+    std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
+    std::sort(ebanks[2].begin(),ebanks[2].end(),tsort);
+    printf("all events sorted\n");
+
+    int t0i = 0;
+    int i = 0;
+    int j = 0;
+    int t0class = 0;
+    int class1 = 1;
+    int class2 = 2;
+    for(int iter=0;iter<10;iter++)
+      {
+	ralasttime[iter]=-100.0;
+	if(iter>=2) lasttime[iter]=-100.0;
+	if(iter<1) blasttime[iter]=-100.0;
+	singlelasttime=-100;
+	lastdet=-100;
+      }
+    
+    if (t0ebuild && ebanks[t0class].size()==0)
+    {
+      return -1;
+    }
+    if (ebanks[class1].size()==0 || ebanks[class2].size()==0)
+    {
+      return -2;
+    }
+    /*    
     while (true)
     {
         if (i>(int)ebanks[class1].size()-1)
@@ -1088,17 +1288,159 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
         }
         //printf("end of i loop %d of %d\n",i,ebanks[class1].size());
     }
+    */
+    
+    // //NEW FOR LOOP OVER EVENTS(liquids)
+    for (int queue=0;queue<=ebanks[class2].size();queue++)
+      {
+	//////////////////////JAIMES COMPARE TEST//////////////////////
+	Int_t mydid=ebanks[class2][queue].detector_id;
+	Double_t current_time=ebanks[class2][queue].time;
+	//if(mydid==5)cout<<current_time<<endl;
+	Double_t current_time_wrapped=fmod(current_time,3*coincwin_hi);//usually 2, gonna try 3
+	if (ebanks[class2][queue].integral[1]==0) continue;
+	Double_t signal = ebanks[class2][queue].integral[1];
+	Double_t background = ebanks[class2][queue].integral[0];
+	//std::cout<<(signal-background)/signal<<std::endl;
+	Double_t psd=(signal-background)/signal;
+
+	if (lasttime[mydid]>0.0 &&(current_time!=lasttime[mydid]))
+	  {
+	    liqdeadtime[mydid]->Fill(current_time-lasttime[mydid]);
+	    //if(mydid==2 && psd>0.21 && psd<0.42)//neutron cut
+	    if(mydid==2 && psd<0.2)//gamma cut
+	      {
+		if (lastdet<0) lastdet=mydid;
+		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
+		if (singlelasttime<0.0) singlelasttime=current_time;
+		//if (singlelasttime<0.0) singlelasttime=current_time;
+		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
+		  {
+		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector2
+		  }
+		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid ) shortraliquid->Fill(current_time-singlelasttime);
+		liqbackground[mydid]->Fill(current_time_wrapped);
+		psdliquid2->Fill(psd);
+				 
+	      }//END OF DET2
+	    //else if(mydid==3 && psd>0.15 && psd<0.3)//neutron cut
+	    else if(mydid==3 && psd<0.13)//gamma cut
+	      {
+		if (lastdet<0) lastdet=mydid;
+		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
+		if (singlelasttime<0.0) singlelasttime=current_time;
+		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
+		  {
+		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector3
+		  }
+		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid) shortraliquid->Fill(current_time-singlelasttime);
+		liqbackground[mydid]->Fill(current_time_wrapped);
+	      }//END OF DET3
+	    //else if(mydid==4 && psd>0.12 && psd<0.3) //neutron cut
+	    else if(mydid==4 && psd<0.1) //gamma cut
+	      {
+		if (lastdet<0) lastdet=mydid;
+		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
+		if (singlelasttime<0.0) singlelasttime=current_time;
+		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
+		  {
+		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector4
+		      }
+		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid) shortraliquid->Fill(current_time-singlelasttime);
+		liqbackground[mydid]->Fill(current_time_wrapped);
+	      }//END OF DET4
+	    //else if(mydid==5 && psd<0.33 && psd>0.15) //neutron cut
+	    else if(mydid==5 && psd<0.13) //gamma cut
+	      {
+		if (lastdet<0) lastdet=mydid;
+		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
+		if (singlelasttime<0.0) singlelasttime=current_time;
+		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
+		  {
+		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector5
+		  }
+		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid ) shortraliquid->Fill(current_time-singlelasttime);
+		liqbackground[mydid]->Fill(current_time_wrapped);
+	      }//END OF DET5
+	      //else if(mydid==6 && psd<0.33 && psd>0.16) //neutron cut
+	    else if(mydid==6 && psd<0.14) //gamma cut
+	      {
+		if (lastdet<0) lastdet=mydid;
+		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
+		if (singlelasttime<0.0) singlelasttime=current_time;
+		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
+		  {
+		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector6
+		  }
+		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid) shortraliquid->Fill(current_time-singlelasttime);
+		liqbackground[mydid]->Fill(current_time_wrapped);
+	      }//END OF DET6
+	      //else if(mydid==7 && psd<0.33 && psd>0.16) //neutron cut
+	    else if(mydid==7 && psd<0.14) //gamma cut
+	      {
+		if (lastdet<0) lastdet=mydid;
+		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
+		if (singlelasttime<0.0) singlelasttime=current_time;
+		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
+		  {
+		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector7
+		  }
+		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid) shortraliquid->Fill(current_time-singlelasttime);
+		liqbackground[mydid]->Fill(current_time_wrapped);
+	      }//END OF DET7
+	  }//END OF MAKING SURE LAST TIME ISNT THIS TIME
+	lasttime[mydid]=ebanks[class2][queue].time;
+	if( (current_time-ralasttime[mydid]) > coincwin_hi)  ralasttime[mydid]=ebanks[class2][queue].time; //If the event is greater than the coinc window away, that event becomes the new "start" clock
+	if((current_time-singlelasttime)>coincwin_hi) 
+	  {
+	    singlelasttime=ebanks[class2][queue].time;
+	    lastdet=mydid;
+	  }
+      }//end of new loop over liquids
+    
+    for (int zee=0;zee<=ebanks[class1].size();zee++)
+      {
+	Int_t did=ebanks[class1][zee].detector_id;
+	Double_t now_time=ebanks[class1][zee].time;
+	if (blasttime[did]>0.0 &&(now_time!=blasttime[did]))
+	  {
+	    bgodeadtime[did]->Fill(now_time-blasttime[did]);
+	    if (ebanks[class1][zee].integral[1]>16000 && ebanks[class1][zee].integral[1]<18500)
+	      {
+		bgobackground[did]->Fill(fmod(now_time,3*coincwin_hi));//Multiply by 3 to maybe work?
+	      }
+	  }
+	blasttime[did]=ebanks[class1][zee].time;
+      }
+
+
 
     if (dump1r)
-      {
-      	otree->Write();
-	orfile->Close();
-      }
+    {
+      for (int q=0;q<10;q++)
+	{
+	  if(q>=2 && q<8)
+	    {
+	      liqbackground[q]->Write();
+	      liqdeadtime[q]->Write();
+	      rossialpha_liquid[q]->Write();
+	    }
+	  if(q<1)
+	    {
+	      bgodeadtime[q]->Write();
+	      bgobackground[q]->Write();
+	    }
+	}
+      psdliquid2->Write();
+      shortraliquid->Write();
+      otree->Write();
+      orfile->Close();
+    }
     if (dump1h)
-      {
-       #include "RootStuff/Hist_S1CHINU_Write.C"
+    {
+     #include "RootStuff/Hist_S1CHINU_Write.C"
         ohfile->Close();
-      }
+    }
 
     return 0;
 }
