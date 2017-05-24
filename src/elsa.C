@@ -4,7 +4,7 @@
 #include "TH1.h"
 #include "TH2.h"
 
-#include <zlib.h> 
+#include <zlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <iostream>
@@ -51,7 +51,7 @@ class elsa_root {
                             // 2 = write pulse height into charge integral
         bool upconvert; // whether to look for clock rollovers
 
-        
+
 
         // data holders
         std::vector<ELSA_BANK> ebanks[MAXNDETCLASS];
@@ -392,7 +392,7 @@ Int_t reset_barhit(MONABAR_HIT *mhit)
   mhit->pright = -1;
   mhit->barnum = -1;
   mhit->iscomplete = false;
-  
+
   return 0;
 }
 
@@ -461,7 +461,7 @@ Int_t elsa_root::insert_pmtstrike(MONABAR_HIT *barhit, ELSA_BANK *pmthit, bool i
     }
 
   }
-  
+
   return 1;
 }
 
@@ -500,7 +500,7 @@ Int_t elsa_root::build_events_mona(Int_t t0ebuild)
     otree->Branch(buf,mevt.y);
     sprintf(buf,"z[%i]",NMONABARS);
     otree->Branch(buf,mevt.z);
-    
+
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -579,7 +579,7 @@ Int_t elsa_root::build_events_dance(Int_t t0ebuild)
     otree->Branch("t0t",&t0time);
     otree->Branch("d1ph",&d1ph);
     otree->Branch("d2ph",&d2ph);
-    
+
     // sort everyone first
     //std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -597,7 +597,7 @@ Int_t elsa_root::build_events_dance(Int_t t0ebuild)
 
     int interesting_counter = 0;
     printf("about to try coinc\n");
-    
+
     for (int i=0;i<ebanks[1].size()-2;++i)
     {
         if (t0ebuild)
@@ -620,7 +620,7 @@ Int_t elsa_root::build_events_dance(Int_t t0ebuild)
             ntof2 = ebanks[1][i+1].time;
             otree->Fill();
         }
-        
+
     }
 
     /*
@@ -685,13 +685,13 @@ Int_t elsa_root::create_barhits(MONA_EVENT* mevt)
      //printf("coinc events too small\n");
      return 1;
    }
-   
+
    std::vector<MONABAR_HIT> bar_hits;
    MONABAR_HIT temphit;
    reset_barhit(&temphit);
    bar_hits.push_back(temphit);
    insert_pmtstrike(&bar_hits[0],&(mevt->coincevts[0]),true);
-   
+
    for (size_t i=1;i<mevt->coincevts.size();++i)
    {
      Int_t success = 0;
@@ -797,7 +797,7 @@ Int_t elsa_root::create_barhits(MONA_EVENT* mevt)
 		mevt->x[mevt->mult]=7.39*mevt->tdiff[mevt->mult] + -359.3;
 		mevt->y[mevt->mult]=20.508;
 		mevt->z[mevt->mult]=135.882;
-       }		
+       }
        mevt->mult += 1;
      }
    }
@@ -824,7 +824,7 @@ Int_t elsa_root::build_events_rpi()
     otree->Branch("t0ph",&t0ph);
     otree->Branch("sgate",&sgate);
     otree->Branch("lgate",&lgate);
-    
+
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -897,7 +897,7 @@ Int_t elsa_root::build_events_lenz()
         ohfile = new TFile(ohpath->Data(),"recreate");
         #include "RootStuff/Hist_S1LENZ_Create.C"
     }
-    
+
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -997,7 +997,7 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
         ohfile = new TFile(ohpath->Data(),"recreate");
         #include "RootStuff/Hist_S1CHINU_Create.C"
       }
-    
+
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -1010,7 +1010,7 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
     int t0class = 0;
     int class1 = 1;
     int class2 = 2;
-        
+
     if (t0ebuild && ebanks[t0class].size()==0)
     {
       return -1;
@@ -1044,7 +1044,7 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
             {
                 break;
             }
-	    
+
 	    Double_t deltat = ebanks[class2][j].time - ebanks[class1][i].time;
             if (deltat < coincwin_lo) // outside low bound of coinc win
             {
@@ -1087,7 +1087,7 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
         //printf("end of i loop %d of %d\n",i,ebanks[class1].size());
     }
 
-    
+
     if (dump1r)
     {
       otree->Write();
@@ -1114,25 +1114,23 @@ Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
     Double_t nph;
     Double_t nsg;
     Double_t t0time;
-    Double_t ppactime;;
+    Double_t ppactime;
+    Double_t rawtime;
+    Double_t peeessdee;
+    Int_t liquidid;
     TTree *otree;
+    TTree *jtree;
     TFile *ohfile;
     Double_t coincwin_lo = -2000000.0;
     Double_t coincwin_hi = 2000000.0;
 
     //HISTOS FOR NDSE
-    TH1D *liqdeadtime[10];
-    TH1D *bgodeadtime[1];
-    double lasttime[10];
-    double blasttime[1];
-    double singlelasttime;
-    int lastdet;
-    TH1D* liqbackground[10];//THIS LINE WILL BE USEFUL LATER
-    TH1D* bgobackground[10];//THIS LINE WILL ALSO BE USEFUL LATER
-    TH1D* rossialpha_liquid[10];
-    TH1D* psdliquid2 = new TH1D("psd","psd",1000,0,.3);
-    TH1D* shortraliquid;
-    double ralasttime[10];
+    double singlelasttimegam;
+    double singlelasttimeneut;
+    int lastdetgam;
+    int lastdetneut;
+    TH1D* shortraliquidGamma;
+    TH1D* shortraliquidNeut;
     //END OF NDSE PACIFIC STUFF
 
 
@@ -1150,36 +1148,18 @@ Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
         otree->Branch("pph",&pph);
         otree->Branch("nsg",&nsg);
         otree->Branch("nph",&nph);
-	for (int iter=0;iter<10;iter++)
-	  {
-	    if (iter<1)
-	      {
-		char btitle[128];
-		sprintf(btitle,"DeadTime_BGO%02i",iter);
-		bgodeadtime[iter]=new TH1D(btitle,btitle,300000,0,coincwin_hi);
-		
-		char bgotitle[128];
-		sprintf(bgotitle,"td1_05_back_sngl_ppac%02i",iter+1);
-		bgobackground[iter]=new TH1D(bgotitle,bgotitle,150000,0,coincwin_hi);
-	      }
-	    if(iter>=2 && iter<9)
-	      {
-		char title[128];
-		sprintf(title,"DeadTime_Liquid%02i",iter);
-		liqdeadtime[iter]=new TH1D(title,title,300000,0,coincwin_hi);
-		
-		//background histograms must have same bin width as the final histograms
-		char bgtitle[128];
-		sprintf(bgtitle,"td1_05_back_sngl_ligl%02i",iter);
-		liqbackground[iter]=new TH1D(bgtitle,bgtitle,450000,coincwin_lo,2*coincwin_hi);
+	otree->Branch("rawtime",&rawtime);
 
-		//rossi alpha histograms
-		char ratitle[128];
-		sprintf(ratitle,"RossiAlpha_liquid%02i",iter);
-		rossialpha_liquid[iter]=new TH1D(ratitle,ratitle,2000050,-50,coincwin_hi);
-	      }
-	  }
-	shortraliquid=new TH1D("ShortTimeRossiAlpha_AllLiquids","ShortTimeRossiAlpha_AllLiquids",2000050,-50,coincwin_hi);
+	jtree = new TTree("secondtree","secondtree");
+        jtree->Branch("rawtime",&rawtime);
+        jtree->Branch("liquidid",&liquidid);
+        jtree->Branch("psd",&peeessdee);
+
+	shortraliquidGamma=new TH1D("GammaShortTimeRossiAlpha_AllLiquids","GammaShortTimeRossiAlpha_AllLiquids",
+				    2000050,-50,coincwin_hi);
+
+	shortraliquidNeut=new TH1D("NeutShortTimeRossiAlpha_AllLiquids","NeutShortTimeRossiAlpha_AllLiquids",
+				   2000050,-50,coincwin_hi);
     }
     #include "RootStuff/Hist_S1CHINU_Define.C"
     if (dump1h)
@@ -1188,7 +1168,7 @@ Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
         ohfile = new TFile(ohpath->Data(),"recreate");
         #include "RootStuff/Hist_S1CHINU_Create.C"
     }
-    
+
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -1201,15 +1181,11 @@ Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
     int t0class = 0;
     int class1 = 1;
     int class2 = 2;
-    for(int iter=0;iter<10;iter++)
-      {
-	ralasttime[iter]=-100.0;
-	if(iter>=2) lasttime[iter]=-100.0;
-	if(iter<1) blasttime[iter]=-100.0;
-	singlelasttime=-100;
-	lastdet=-100;
-      }
-    
+    singlelasttimegam=-100;
+    lastdetgam=-100;
+    singlelasttimeneut=-100;
+    lastdetneut=-100;
+
     if (t0ebuild && ebanks[t0class].size()==0)
     {
       return -1;
@@ -1218,7 +1194,7 @@ Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
     {
       return -2;
     }
-    /*    
+
     while (true)
     {
         if (i>(int)ebanks[class1].size()-1)
@@ -1235,8 +1211,8 @@ Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
             //t0tof_wrapped = ((100000.*(t0tof-0.0)%(100000*1788.819875776))/100000.);
             t0tof_wrapped = fmod(t0tof,1788.819875776);
         }
-	
-        
+
+
 
 
 	// loop for neutron detectors
@@ -1246,7 +1222,7 @@ Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
             {
                 break;
             }
-	    
+
 	    Double_t deltat = ebanks[class2][j].time - ebanks[class1][i].time;
             if (deltat < coincwin_lo) // outside low bound of coinc win
             {
@@ -1288,152 +1264,182 @@ Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
         }
         //printf("end of i loop %d of %d\n",i,ebanks[class1].size());
     }
-    */
-    
-    // //NEW FOR LOOP OVER EVENTS(liquids)
+
+
     for (int queue=0;queue<=ebanks[class2].size();queue++)
       {
-	//////////////////////JAIMES COMPARE TEST//////////////////////
+	rawtime=ebanks[class2][queue].time;
+        liquidid=ebanks[class2][queue].detector_id;
+
 	Int_t mydid=ebanks[class2][queue].detector_id;
-	Double_t current_time=ebanks[class2][queue].time;
-	//if(mydid==5)cout<<current_time<<endl;
-	Double_t current_time_wrapped=fmod(current_time,3*coincwin_hi);//usually 2, gonna try 3
+        Double_t current_time=ebanks[class2][queue].time;
 	if (ebanks[class2][queue].integral[1]==0) continue;
-	Double_t signal = ebanks[class2][queue].integral[1];
-	Double_t background = ebanks[class2][queue].integral[0];
-	//std::cout<<(signal-background)/signal<<std::endl;
+        Double_t signal = ebanks[class2][queue].integral[1];
+        Double_t background = ebanks[class2][queue].integral[0];
 	Double_t psd=(signal-background)/signal;
+        peeessdee=psd;
+        if(dump1r) jtree->Fill();
 
-	if (lasttime[mydid]>0.0 &&(current_time!=lasttime[mydid]))
-	  {
-	    liqdeadtime[mydid]->Fill(current_time-lasttime[mydid]);
-	    //if(mydid==2 && psd>0.21 && psd<0.42)//neutron cut
-	    if(mydid==2 && psd<0.2)//gamma cut
-	      {
-		if (lastdet<0) lastdet=mydid;
-		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
-		if (singlelasttime<0.0) singlelasttime=current_time;
-		//if (singlelasttime<0.0) singlelasttime=current_time;
-		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
-		  {
-		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector2
-		  }
-		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid ) shortraliquid->Fill(current_time-singlelasttime);
-		liqbackground[mydid]->Fill(current_time_wrapped);
-		psdliquid2->Fill(psd);
-				 
-	      }//END OF DET2
-	    //else if(mydid==3 && psd>0.15 && psd<0.3)//neutron cut
-	    else if(mydid==3 && psd<0.13)//gamma cut
-	      {
-		if (lastdet<0) lastdet=mydid;
-		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
-		if (singlelasttime<0.0) singlelasttime=current_time;
-		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
-		  {
-		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector3
-		  }
-		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid) shortraliquid->Fill(current_time-singlelasttime);
-		liqbackground[mydid]->Fill(current_time_wrapped);
-	      }//END OF DET3
-	    //else if(mydid==4 && psd>0.12 && psd<0.3) //neutron cut
-	    else if(mydid==4 && psd<0.1) //gamma cut
-	      {
-		if (lastdet<0) lastdet=mydid;
-		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
-		if (singlelasttime<0.0) singlelasttime=current_time;
-		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
-		  {
-		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector4
-		      }
-		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid) shortraliquid->Fill(current_time-singlelasttime);
-		liqbackground[mydid]->Fill(current_time_wrapped);
-	      }//END OF DET4
-	    //else if(mydid==5 && psd<0.33 && psd>0.15) //neutron cut
-	    else if(mydid==5 && psd<0.13) //gamma cut
-	      {
-		if (lastdet<0) lastdet=mydid;
-		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
-		if (singlelasttime<0.0) singlelasttime=current_time;
-		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
-		  {
-		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector5
-		  }
-		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid ) shortraliquid->Fill(current_time-singlelasttime);
-		liqbackground[mydid]->Fill(current_time_wrapped);
-	      }//END OF DET5
-	      //else if(mydid==6 && psd<0.33 && psd>0.16) //neutron cut
-	    else if(mydid==6 && psd<0.14) //gamma cut
-	      {
-		if (lastdet<0) lastdet=mydid;
-		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
-		if (singlelasttime<0.0) singlelasttime=current_time;
-		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
-		  {
-		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector6
-		  }
-		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid) shortraliquid->Fill(current_time-singlelasttime);
-		liqbackground[mydid]->Fill(current_time_wrapped);
-	      }//END OF DET6
-	      //else if(mydid==7 && psd<0.33 && psd>0.16) //neutron cut
-	    else if(mydid==7 && psd<0.14) //gamma cut
-	      {
-		if (lastdet<0) lastdet=mydid;
-		if (ralasttime[mydid]<0.0) ralasttime[mydid]=current_time;//This gets us past the first event
-		if (singlelasttime<0.0) singlelasttime=current_time;
-		if ( ((current_time-ralasttime[mydid]) <= coincwin_hi) && (ralasttime[mydid]!=current_time))
-		  {
-		    rossialpha_liquid[mydid]->Fill( (current_time-ralasttime[mydid]) ); //detector7
-		  }
-		if ( (current_time-singlelasttime <= coincwin_hi) && lastdet!=mydid) shortraliquid->Fill(current_time-singlelasttime);
-		liqbackground[mydid]->Fill(current_time_wrapped);
-	      }//END OF DET7
-	  }//END OF MAKING SURE LAST TIME ISNT THIS TIME
-	lasttime[mydid]=ebanks[class2][queue].time;
-	if( (current_time-ralasttime[mydid]) > coincwin_hi)  ralasttime[mydid]=ebanks[class2][queue].time; //If the event is greater than the coinc window away, that event becomes the new "start" clock
-	if((current_time-singlelasttime)>coincwin_hi) 
-	  {
-	    singlelasttime=ebanks[class2][queue].time;
-	    lastdet=mydid;
-	  }
-      }//end of new loop over liquids
-    
-    for (int zee=0;zee<=ebanks[class1].size();zee++)
-      {
-	Int_t did=ebanks[class1][zee].detector_id;
-	Double_t now_time=ebanks[class1][zee].time;
-	if (blasttime[did]>0.0 &&(now_time!=blasttime[did]))
-	  {
-	    bgodeadtime[did]->Fill(now_time-blasttime[did]);
-	    if (ebanks[class1][zee].integral[1]>16000 && ebanks[class1][zee].integral[1]<18500)
-	      {
-		bgobackground[did]->Fill(fmod(now_time,3*coincwin_hi));//Multiply by 3 to maybe work?
-	      }
-	  }
-	blasttime[did]=ebanks[class1][zee].time;
-      }
+	//GAMMA PLOTS//
+        if (singlelasttimegam>0.0 && (current_time!=singlelasttimegam))
+          {
+            if(mydid==2 && psd<0.2)
+              {
+                if (lastdetgam<0)
+                  {
+                    lastdetgam=mydid;
+                  }
+                if ( (current_time-singlelasttimegam <= coincwin_hi) && lastdetgam!=mydid )
+                  {
+                    shortraliquidGamma->Fill(current_time-singlelasttimegam);
+                  }
+              }//END OF DET2
+	    else if(mydid==3 && psd<0.13)
+              {
+                if (lastdetgam<0)
+                  {
+                    lastdetgam=mydid;
+                  }
+                if ( (current_time-singlelasttimegam <= coincwin_hi) && lastdetgam!=mydid )
+                  {
+                    shortraliquidGamma->Fill(current_time-singlelasttimegam);
+                  }
+              }//END OF DET3
+	    else if(mydid==4 && psd<0.1)
+              {
+                if (lastdetgam<0)
+                  {
+                    lastdetgam=mydid;
+                  }
+                if ( (current_time-singlelasttimegam <= coincwin_hi) && lastdetgam!=mydid )
+                  {
+                    shortraliquidGamma->Fill(current_time-singlelasttimegam);
+                  }
+              }//END OF DET4
+	    else if(mydid==5 && psd<0.13)
+              {
+                if (lastdetgam<0)
+                  {
+                    lastdetgam=mydid;
+                  }
+                if ( (current_time-singlelasttimegam <= coincwin_hi) && lastdetgam!=mydid )
+                  {
+                    shortraliquidGamma->Fill(current_time-singlelasttimegam);
+                  }
+              }//END OF DET5
+	    else if(mydid==6 && psd<0.14)
+              {
+                if (lastdetgam<0)
+                  {
+                    lastdetgam=mydid;
+                  }
+                if ( (current_time-singlelasttimegam <= coincwin_hi) && lastdetgam!=mydid )
+                  {
+                    shortraliquidGamma->Fill(current_time-singlelasttimegam);
+                  }
+              }//END OF DET6
+	    else if(mydid==7 && psd<0.14)
+              {
+                if (lastdetgam<0)
+                  {
+                    lastdetgam=mydid;
+                  }
+                if ( (current_time-singlelasttimegam <= coincwin_hi) && lastdetgam!=mydid )
+                  {
+                    shortraliquidGamma->Fill(current_time-singlelasttimegam);
+                  }
+              }//END OF DET7
+          }//END OF MKAING SURE LAST TIME ISNT THIS TIME
 
+	//NEUTRON PLOTS//
+	if (singlelasttimeneut>0.0 && (current_time!=singlelasttimeneut))
+          {
+            if(mydid==2 && psd>0.21 && psd<0.42)
+              {
+                if (lastdetneut<0)
+                  {
+                    lastdetneut=mydid;
+                  }
+                if ( (current_time-singlelasttimeneut <= coincwin_hi) && lastdetneut!=mydid )
+                  {
+                    shortraliquidNeut->Fill(current_time-singlelasttimeneut);
+                  }
+              }//END OF DET2
+            else if(mydid==3 && psd>0.15 && psd<0.3)
+              {
+                if (lastdetneut<0)
+                  {
+                    lastdetneut=mydid;
+                  }
+                if ( (current_time-singlelasttimeneut<= coincwin_hi) && lastdetneut!=mydid )
+                  {
+                    shortraliquidNeut->Fill(current_time-singlelasttimeneut);
+                  }
+              }//END OF DET3
+	    else if(mydid==4 && psd>0.12 && psd<0.3)
+	    {
+	      if (lastdetneut<0)
+		{
+		  lastdetneut=mydid;
+		}
+	      if ( (current_time-singlelasttimeneut <= coincwin_hi) && lastdetneut!=mydid )
+		{
+		  shortraliquidNeut->Fill(current_time-singlelasttimeneut);
+		}
+	    }//END OF DET4
+            else if(mydid==5 && psd<0.33 && psd>0.15)
+              {
+                if (lastdetneut<0)
+                  {
+                    lastdetneut=mydid;
+                  }
+                if ( (current_time-singlelasttimeneut <= coincwin_hi) && lastdetneut!=mydid )
+                  {
+                    shortraliquidNeut->Fill(current_time-singlelasttimeneut);
+                  }
+              }//END OF DET5
+	    else if(mydid==6 && psd<0.33 && psd>0.16)
+              {
+                if (lastdetneut<0)
+                  {
+                    lastdetneut=mydid;
+                  }
+                if ( (current_time-singlelasttimeneut <= coincwin_hi) && lastdetneut!=mydid )
+                  {
+                    shortraliquidNeut->Fill(current_time-singlelasttimeneut);
+                  }
+              }//END OF DET6
+            else if(mydid==7 && psd<0.33 && psd>0.16)
+              {
+                if (lastdetneut<0)
+                  {
+                    lastdetneut=mydid;
+                  }
+                if ( (current_time-singlelasttimeneut <= coincwin_hi) && lastdetneut!=mydid )
+                  {
+                    shortraliquidNeut->Fill(current_time-singlelasttimeneut);
+                  }
+              }//END OF DET7
+          }//END OF MKAING SURE LAST TIME ISNT THIS TIME
 
+	if((current_time-singlelasttimegam)>coincwin_hi)
+          {
+            singlelasttimegam=ebanks[class2][queue].time;
+            lastdetgam=mydid;
+          }
+	if((current_time-singlelasttimeneut)>coincwin_hi)
+          {
+            singlelasttimeneut=ebanks[class2][queue].time;
+            lastdetneut=mydid;
+          }
+      }//END OF NEW LOOP ON LIQUIDS
 
     if (dump1r)
     {
-      for (int q=0;q<10;q++)
-	{
-	  if(q>=2 && q<8)
-	    {
-	      liqbackground[q]->Write();
-	      liqdeadtime[q]->Write();
-	      rossialpha_liquid[q]->Write();
-	    }
-	  if(q<1)
-	    {
-	      bgodeadtime[q]->Write();
-	      bgobackground[q]->Write();
-	    }
-	}
-      psdliquid2->Write();
-      shortraliquid->Write();
+      shortraliquidGamma->Write();
+      shortraliquidNeut->Write();
       otree->Write();
+      jtree->Write();
       orfile->Close();
     }
     if (dump1h)
@@ -1539,7 +1545,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
         last_ts[i]=0;
         ts_base[i]=0;
     }
-    
+
 
     int TotalDataSize;
     int TotalBankSize; //=head.fDataSize;
@@ -1571,7 +1577,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
             cout << dec << head.fSerialNumber << endl;
             cout << dec << head.fTimeStamp << endl;
             cout << dec << head.fDataSize << endl;
-        }	
+        }
         if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
             if(head.fEventId==0x8001)
             {
@@ -1583,15 +1589,15 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];			
+                    cout << fData[i];
                 }
-            }	
-            free (fData);	
+            }
+            free (fData);
         }
         else if(head.fEventId==1){
             //printf("This is event data\n");
             // this is event data
-            gzread(in,&bhead,sizeof(BankHeader_t));	
+            gzread(in,&bhead,sizeof(BankHeader_t));
             if(MidasEventPrint && nevt > MidasEventPrintThresh){
                 cout << "Bank_HEADER " << endl;
                 cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
@@ -1602,7 +1608,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
             int insidecounter = 0;
             while(TotalBankSize>0){
                 insidecounter += 1;
-                            
+
                 gzread(in,&bank32,sizeof(Bank32_t));
                 TotalBankSize-=sizeof(Bank32_t);
                 if(MidasEventPrint && nevt > MidasEventPrintThresh){
@@ -1631,7 +1637,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
                         n_read_evts += 1;
                     }
 
-                                    
+
                     // snag the trig bank
                     gzread(in,&bank32,sizeof(Bank32_t));
                     TotalBankSize-=sizeof(Bank32_t);
@@ -1642,8 +1648,8 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
                     //printf("data size %d\n",bank32.fDataSize);
                     gzread(in,fData,bank32.fDataSize);
                     TotalBankSize -= EventBankSize;
-                    free (fData);	
-                                
+                    free (fData);
+
                     // begin funny place between peaks and cpu
                     while (true)
                     {
@@ -1664,7 +1670,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
                             fData=(char*)malloc(bank32.fDataSize);
                             gzread(in,fData,bank32.fDataSize);
                             TotalBankSize -= EventBankSize;
-                            free (fData);	
+                            free (fData);
                             break; // you break here because the cpu comes last
                         }
 
@@ -1776,7 +1782,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
                 }
                 break;
             }
-                
+
                     //printf("BROKEN OUT OF EVENT READ LOOP\n");
         }
         else {
@@ -1785,10 +1791,10 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];			
+                    cout << fData[i];
                 }
-            }	
-            free (fData);	
+            }
+            free (fData);
         }
         nevt += 1;
         if (nevt>STOPatEVENT)
@@ -1828,7 +1834,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
         last_ts[i]=0;
         ts_base[i]=0;
     }
-    
+
 
     int TotalDataSize;
     int TotalBankSize; //=head.fDataSize;
@@ -1860,7 +1866,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
             cout << dec << head.fSerialNumber << endl;
             cout << dec << head.fTimeStamp << endl;
             cout << dec << head.fDataSize << endl;
-        }	
+        }
         if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
             if(head.fEventId==0x8001)
             {
@@ -1872,15 +1878,15 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];			
+                    cout << fData[i];
                 }
-            }	
-            free (fData);	
+            }
+            free (fData);
         }
         else if(head.fEventId==1){
             //printf("This is event data\n");
             // this is event data
-            gzread(in,&bhead,sizeof(BankHeader_t));	
+            gzread(in,&bhead,sizeof(BankHeader_t));
             if(MidasEventPrint && nevt > MidasEventPrintThresh){
                 cout << "Bank_HEADER " << endl;
                 cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
@@ -1891,7 +1897,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
             int insidecounter = 0;
             while(TotalBankSize>0){
                 insidecounter += 1;
-                            
+
                 gzread(in,&bank32,sizeof(Bank32_t));
                 TotalBankSize-=sizeof(Bank32_t);
                 if(MidasEventPrint && nevt > MidasEventPrintThresh){
@@ -1920,7 +1926,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                         n_read_evts += 1;
                     }
 
-                                    
+
                     // snag the trig bank
                     gzread(in,&bank32,sizeof(Bank32_t));
                     TotalBankSize-=sizeof(Bank32_t);
@@ -1931,8 +1937,8 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                     //printf("data size %d\n",bank32.fDataSize);
                     gzread(in,fData,bank32.fDataSize);
                     TotalBankSize -= EventBankSize;
-                    free (fData);	
-                                
+                    free (fData);
+
                     // begin funny place between peaks and cpu
                     while (true)
                     {
@@ -1963,7 +1969,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                             fData=(char*)malloc(bank32.fDataSize);
                             gzread(in,fData,bank32.fDataSize);
                             TotalBankSize -= EventBankSize;
-                            free (fData);	
+                            free (fData);
                             break; // you break here because the cpu comes last
                         }
 
@@ -2013,7 +2019,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                                 //printf("hey i found rollover on channel %i\n",current_detnum);
                                 ts_base[current_detnum] =ts_base[current_detnum] + pow(2,NBITSCLOCK);
                                 //std::cout << "My ts base is now " << ts_base[current_detnum] << std::endl;
-                            
+
                             }
                             ts_full = ts_base[current_detnum] + evaggr->P[evtnum].position;
                             last_ts[current_detnum] = evaggr->P[evtnum].position;
@@ -2095,7 +2101,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                 }
                 break;
             }
-                
+
                     //printf("BROKEN OUT OF EVENT READ LOOP\n");
         }
         else {
@@ -2104,10 +2110,10 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];			
+                    cout << fData[i];
                 }
-            }	
-            free (fData);	
+            }
+            free (fData);
         }
         nevt += 1;
         if (nevt>STOPatEVENT)
@@ -2156,7 +2162,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
         //#include "RootStuff/Hist_S0DANCE_Create.C"
     }
     printf("start cevt read\n");
-    
+
 
     int TotalDataSize;
     int TotalBankSize; //=head.fDataSize;
@@ -2186,7 +2192,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
             cout << dec << head.fSerialNumber << endl;
             cout << dec << head.fTimeStamp << endl;
             cout << dec << head.fDataSize << endl;
-        }	
+        }
         if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
             if(head.fEventId==0x8001)
             {
@@ -2198,15 +2204,15 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];			
+                    cout << fData[i];
                 }
-            }	
-            free (fData);	
+            }
+            free (fData);
         }
         else if(head.fEventId==1){
             //printf("This is event data\n");
             // this is event data
-            gzread(in,&bhead,sizeof(BankHeader_t));	
+            gzread(in,&bhead,sizeof(BankHeader_t));
             if(MidasEventPrint && nevt > MidasEventPrintThresh){
                 cout << "Bank_HEADER " << endl;
                 cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
@@ -2217,7 +2223,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
             int insidecounter = 0;
             while(TotalBankSize>0){
                 insidecounter += 1;
-                            
+
                 gzread(in,&bank32,sizeof(Bank32_t));
                 TotalBankSize-=sizeof(Bank32_t);
                 if(MidasEventPrint && nevt > MidasEventPrintThresh){
@@ -2249,7 +2255,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                       printf("read the firmware events\n");
                     }
 
-                                    
+
                     // snag the trig bank
                     gzread(in,&bank32,sizeof(Bank32_t));
                     TotalBankSize-=sizeof(Bank32_t);
@@ -2259,8 +2265,8 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                     fData=(char*)malloc(bank32.fDataSize);
                     gzread(in,fData,bank32.fDataSize);
                     TotalBankSize -= EventBankSize;
-                    free (fData);	
-                                
+                    free (fData);
+
                     // begin funny place between peaks and cpu
                     while (true)
                     {
@@ -2280,7 +2286,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                             fData=(char*)malloc(bank32.fDataSize);
                             gzread(in,fData,bank32.fDataSize);
                             TotalBankSize -= EventBankSize;
-                            free (fData);	
+                            free (fData);
                             break; // you break here because the cpu comes last
                         }
 
@@ -2296,14 +2302,14 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                     {
                         if (MidasEventPrint)
                         {
-                            
+
                             if (evaggr->N > MaxHitsPerT0)
                             {
                               printf("on event %d of %d\n\n\n\n\n\n\n",evtnum,evaggr->N);
                               break;
                               //return 0;
                             }
-                           
+
                         }
                         INT current_detnum = evaggr->P[evtnum].detector_id;
                         if (current_detnum != last_detnum)
@@ -2404,7 +2410,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                 }
                 break;
             }
-                
+
                     //printf("BROKEN OUT OF EVENT READ LOOP\n");
         }
         else {
@@ -2413,10 +2419,10 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];			
+                    cout << fData[i];
                 }
-            }	
-            free (fData);	
+            }
+            free (fData);
         }
         nevt += 1;
         if (nevt>STOPatEVENT)
