@@ -4,7 +4,7 @@
 #include "TH1.h"
 #include "TH2.h"
 
-#include <zlib.h>
+#include <zlib.h> 
 #include <stdint.h>
 #include <stdio.h>
 #include <iostream>
@@ -51,7 +51,7 @@ class elsa_root {
                             // 2 = write pulse height into charge integral
         bool upconvert; // whether to look for clock rollovers
 
-
+        
 
         // data holders
         std::vector<ELSA_BANK> ebanks[MAXNDETCLASS];
@@ -84,8 +84,9 @@ class elsa_root {
         TGraph *walk;
 
         // functions
-        Int_t execute_uac_qils(double interp_slope);
+        Int_t execute_uac_qils(double interp_slope, bool have_peaks);
         Int_t execute_uac_pils(double interp_slope);
+        Int_t transcribe_uac_pils(double interp_slope);
         Int_t execute_uac_cevt(double interp_slope);
         Int_t execute_s0bin(Int_t calibrate_time, Int_t calibrate_energy);
         Int_t execute_devt(Int_t dtype);
@@ -392,7 +393,7 @@ Int_t reset_barhit(MONABAR_HIT *mhit)
   mhit->pright = -1;
   mhit->barnum = -1;
   mhit->iscomplete = false;
-
+  
   return 0;
 }
 
@@ -461,7 +462,7 @@ Int_t elsa_root::insert_pmtstrike(MONABAR_HIT *barhit, ELSA_BANK *pmthit, bool i
     }
 
   }
-
+  
   return 1;
 }
 
@@ -500,7 +501,7 @@ Int_t elsa_root::build_events_mona(Int_t t0ebuild)
     otree->Branch(buf,mevt.y);
     sprintf(buf,"z[%i]",NMONABARS);
     otree->Branch(buf,mevt.z);
-
+    
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -579,7 +580,7 @@ Int_t elsa_root::build_events_dance(Int_t t0ebuild)
     otree->Branch("t0t",&t0time);
     otree->Branch("d1ph",&d1ph);
     otree->Branch("d2ph",&d2ph);
-
+    
     // sort everyone first
     //std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -597,7 +598,7 @@ Int_t elsa_root::build_events_dance(Int_t t0ebuild)
 
     int interesting_counter = 0;
     printf("about to try coinc\n");
-
+    
     for (int i=0;i<ebanks[1].size()-2;++i)
     {
         if (t0ebuild)
@@ -620,7 +621,7 @@ Int_t elsa_root::build_events_dance(Int_t t0ebuild)
             ntof2 = ebanks[1][i+1].time;
             otree->Fill();
         }
-
+        
     }
 
     /*
@@ -685,13 +686,13 @@ Int_t elsa_root::create_barhits(MONA_EVENT* mevt)
      //printf("coinc events too small\n");
      return 1;
    }
-
+   
    std::vector<MONABAR_HIT> bar_hits;
    MONABAR_HIT temphit;
    reset_barhit(&temphit);
    bar_hits.push_back(temphit);
    insert_pmtstrike(&bar_hits[0],&(mevt->coincevts[0]),true);
-
+   
    for (size_t i=1;i<mevt->coincevts.size();++i)
    {
      Int_t success = 0;
@@ -797,7 +798,7 @@ Int_t elsa_root::create_barhits(MONA_EVENT* mevt)
 		mevt->x[mevt->mult]=7.39*mevt->tdiff[mevt->mult] + -359.3;
 		mevt->y[mevt->mult]=20.508;
 		mevt->z[mevt->mult]=135.882;
-       }
+       }		
        mevt->mult += 1;
      }
    }
@@ -824,7 +825,7 @@ Int_t elsa_root::build_events_rpi()
     otree->Branch("t0ph",&t0ph);
     otree->Branch("sgate",&sgate);
     otree->Branch("lgate",&lgate);
-
+    
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -897,7 +898,7 @@ Int_t elsa_root::build_events_lenz()
         ohfile = new TFile(ohpath->Data(),"recreate");
         #include "RootStuff/Hist_S1LENZ_Create.C"
     }
-
+    
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -971,10 +972,6 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
     Double_t ppactime;;
     TTree *otree;
     TFile *ohfile;
-    Double_t coincwin_lo = -2000000.0;
-    Double_t coincwin_hi = 2000000.0;
-
-
     printf("dump1r %i dump1h %i\n",dump1r,dump1h);
     if (dump1r)
     {
@@ -987,17 +984,16 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
         otree->Branch("t0t",&t0time);
         otree->Branch("ppt",&ppactime);
         otree->Branch("pph",&pph);
-        otree->Branch("nsg",&nsg);
         otree->Branch("nph",&nph);
     }
     #include "RootStuff/Hist_S1CHINU_Define.C"
     if (dump1h)
-      {
+    {
         printf("opening root histo file %s\n",ohpath->Data());
         ohfile = new TFile(ohpath->Data(),"recreate");
         #include "RootStuff/Hist_S1CHINU_Create.C"
-      }
-
+    }
+    
     // sort everyone first
     std::sort(ebanks[0].begin(),ebanks[0].end(),tsort);
     std::sort(ebanks[1].begin(),ebanks[1].end(),tsort);
@@ -1007,6 +1003,8 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
     int t0i = 0;
     int i = 0;
     int j = 0;
+    Double_t coincwin_lo = -250.0;
+    Double_t coincwin_hi = 250.0;
     int t0class = 0;
     int class1 = 1;
     int class2 = 2;
@@ -1036,16 +1034,14 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
             //t0tof_wrapped = ((100000.*(t0tof-0.0)%(100000*1788.819875776))/100000.);
             t0tof_wrapped = fmod(t0tof,1788.819875776);
         }
-
-	// loop for neutron detectors
+        // loop for neutron detectors
         while (true)
         {
             if (j>(int)ebanks[class2].size()-1)
             {
                 break;
             }
-
-	    Double_t deltat = ebanks[class2][j].time - ebanks[class1][i].time;
+            Double_t deltat = ebanks[class2][j].time - ebanks[class1][i].time;
             if (deltat < coincwin_lo) // outside low bound of coinc win
             {
                 j += 1;
@@ -1086,22 +1082,18 @@ Int_t elsa_root::build_events_chinu(Int_t t0ebuild)
         }
         //printf("end of i loop %d of %d\n",i,ebanks[class1].size());
     }
-
-
     if (dump1r)
     {
-      otree->Write();
-      orfile->Close();
+        otree->Write();
+        orfile->Close();
     }
     if (dump1h)
     {
-     #include "RootStuff/Hist_S1CHINU_Write.C"
+        #include "RootStuff/Hist_S1CHINU_Write.C"
         ohfile->Close();
     }
-
     return 0;
 }
-
 
 Int_t elsa_root::build_events_ndse(Int_t t0ebuild)
 {
@@ -1525,7 +1517,7 @@ Int_t elsa_root::execute_s0bin(Int_t calibrate_time, Int_t calibrate_energy)
     return 0;
 }
 
-Int_t elsa_root::execute_uac_qils(double interp_slope)
+Int_t elsa_root::execute_uac_qils(double interp_slope,bool have_peaks)
 {
     EventHeader_t head;	// Midas EventHeader
     EventHeader_t endrun; // end run buffer
@@ -1545,7 +1537,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
         last_ts[i]=0;
         ts_base[i]=0;
     }
-
+    
 
     int TotalDataSize;
     int TotalBankSize; //=head.fDataSize;
@@ -1577,7 +1569,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
             cout << dec << head.fSerialNumber << endl;
             cout << dec << head.fTimeStamp << endl;
             cout << dec << head.fDataSize << endl;
-        }
+        }	
         if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
             if(head.fEventId==0x8001)
             {
@@ -1589,15 +1581,15 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];
+                    cout << fData[i];			
                 }
-            }
-            free (fData);
+            }	
+            free (fData);	
         }
         else if(head.fEventId==1){
             //printf("This is event data\n");
             // this is event data
-            gzread(in,&bhead,sizeof(BankHeader_t));
+            gzread(in,&bhead,sizeof(BankHeader_t));	
             if(MidasEventPrint && nevt > MidasEventPrintThresh){
                 cout << "Bank_HEADER " << endl;
                 cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
@@ -1608,7 +1600,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
             int insidecounter = 0;
             while(TotalBankSize>0){
                 insidecounter += 1;
-
+                            
                 gzread(in,&bank32,sizeof(Bank32_t));
                 TotalBankSize-=sizeof(Bank32_t);
                 if(MidasEventPrint && nevt > MidasEventPrintThresh){
@@ -1629,51 +1621,57 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
                         gzread(in,evinfo,sizeof(QILS_BANK));
                         //printf("the size of a pils is %d\n",sizeof(QILS_BANK));
                         gzseek(in,devt_padding,SEEK_CUR);
-                        //printf("channel number %i\n",evinfo->channel);
+                        if (evinfo->detector_id>100)
+                        {
+                          printf("channel number %i\n",evinfo->detector_id);
+                        }
                         TotalBankSize-=sizeof(QILS_BANK)+devt_padding;
                         EventBankSize-=sizeof(QILS_BANK)+devt_padding;
                         evaggr->P[evaggr->N] = *evinfo;
                         evaggr->N += 1;
                         n_read_evts += 1;
                     }
-
-
-                    // snag the trig bank
-                    gzread(in,&bank32,sizeof(Bank32_t));
-                    TotalBankSize-=sizeof(Bank32_t);
-                    EventBankSize = bank32.fDataSize;
-
-                    char *fData;
-                    fData=(char*)malloc(bank32.fDataSize);
-                    //printf("data size %d\n",bank32.fDataSize);
-                    gzread(in,fData,bank32.fDataSize);
-                    TotalBankSize -= EventBankSize;
-                    free (fData);
-
-                    // begin funny place between peaks and cpu
-                    while (true)
-                    {
-                        // the peaks bank should be here
+                        // snag the trig bank
                         gzread(in,&bank32,sizeof(Bank32_t));
                         TotalBankSize-=sizeof(Bank32_t);
                         EventBankSize = bank32.fDataSize;
-                        if(bank32.fName[0]=='p')
-                        {
-                            int whichpeak = atoi(&bank32.fName[1]);
-                            //printf("about to read peaks size %d\n",bank32.fDataSize);
-                            gzread(in,imported_peaks[whichpeak],bank32.fDataSize);
-                            //gzread(in,waveform,bank32.fDataSize);
-                            TotalBankSize -= EventBankSize;
-                        } else
-                        {
-                            // get the cpu bank information
-                            fData=(char*)malloc(bank32.fDataSize);
-                            gzread(in,fData,bank32.fDataSize);
-                            TotalBankSize -= EventBankSize;
-                            free (fData);
-                            break; // you break here because the cpu comes last
-                        }
 
+                        char *fData;
+                        fData=(char*)malloc(bank32.fDataSize);
+                        //printf("data size %d\n",bank32.fDataSize);
+                        gzread(in,fData,bank32.fDataSize);
+                        TotalBankSize -= EventBankSize;
+                        free (fData);	
+
+                                    
+                    // begin funny place between peaks and cpu
+                    if (have_peaks)
+                    {
+                                
+                        while (true)
+                        {
+                            // the peaks bank should be here
+                            gzread(in,&bank32,sizeof(Bank32_t));
+                            TotalBankSize-=sizeof(Bank32_t);
+                            EventBankSize = bank32.fDataSize;
+                            if(bank32.fName[0]=='p')
+                            {
+                                int whichpeak = atoi(&bank32.fName[1]);
+                                //printf("about to read peaks size %d\n",bank32.fDataSize);
+                                gzread(in,imported_peaks[whichpeak],bank32.fDataSize);
+                                //gzread(in,waveform,bank32.fDataSize);
+                                TotalBankSize -= EventBankSize;
+                            } else
+                            {
+                                // get the cpu bank information
+                                fData=(char*)malloc(bank32.fDataSize);
+                                gzread(in,fData,bank32.fDataSize);
+                                TotalBankSize -= EventBankSize;
+                                free (fData);	
+                                break; // you break here because the cpu comes last
+                            }
+
+                        }
                     }
                     //printf("total bank left now is %i\n",TotalBankSize);
                     // and here is where we actually tie thangs back together
@@ -1697,13 +1695,17 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
                         {
                         }
                         uint32_t wflen = evaggr->P[evtnum].wavelet_stop - evaggr->P[evtnum].wavelet_start;
-                        for (size_t wfindex=where_in_peakbank;wfindex<where_in_peakbank+wflen;++wfindex)
+                        if (have_peaks)
                         {
-                            //printf("on index %d\n",wfindex);
-                            evaggr->wavelets[evtnum][wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
-                            waveform[wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
+                            uint32_t wflen = evaggr->P[evtnum].wavelet_stop - evaggr->P[evtnum].wavelet_start;
+                            for (size_t wfindex=where_in_peakbank;wfindex<where_in_peakbank+wflen;++wfindex)
+                            {
+                                //printf("on index %d\n",wfindex);
+                                evaggr->wavelets[evtnum][wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
+                                waveform[wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
+                            }
+                            where_in_peakbank += wflen;
                         }
-                        where_in_peakbank += wflen;
                         last_detnum = current_detnum;
 
                         // finally write to output
@@ -1782,7 +1784,7 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
                 }
                 break;
             }
-
+                
                     //printf("BROKEN OUT OF EVENT READ LOOP\n");
         }
         else {
@@ -1791,10 +1793,320 @@ Int_t elsa_root::execute_uac_qils(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];
+                    cout << fData[i];			
                 }
+            }	
+            free (fData);	
+        }
+        nevt += 1;
+        if (nevt>STOPatEVENT)
+        {
+            printf("stopped at event %d of %d\n",nevt,STOPatEVENT);
+            run = false;
+        }
+    } while (run);
+
+    fclose(obfile);
+    delete evinfo;
+    delete evinfo_proc;
+    delete elsa_event;
+    delete evaggr;
+    return 0;
+}
+
+Int_t elsa_root::transcribe_uac_pils(double interp_slope)
+{
+    int readval = 0;
+    EventHeader_t head;	// Midas EventHeader
+    EventHeader_t endrun; // end run buffer
+    BankHeader_t bhead;		// Midas bank header
+    Bank32_t bank32;		// Midas 32bit bank
+    Bank32_t bank32trig;		// Midas 32bit bank
+    Bank32_t bank32pils;		// Midas 32bit bank
+    char *fDatatrig;
+    PILS_BANK *evinfo = new PILS_BANK();
+    QILS_BANK *evinfo_proc = new QILS_BANK(); // caen event info
+    ELSA_BANK *elsa_event = new ELSA_BANK();
+    test_struct_qils *evaggr = new test_struct_qils();
+    FILE *obfile = fopen(opath->Data(),"w");
+
+    UInt_t last_ts[MAXNDETS];
+    ULong64_t ts_base[MAXNDETS];
+    ULong64_t ts_full = 0;
+    for (int i=1;i<=MAXNDETS;++i)
+    {
+        last_ts[i]=0;
+        ts_base[i]=0;
+    }
+    
+
+    int TotalDataSize;
+    int TotalBankSize; //=head.fDataSize;
+    int EventBankSize; //=head.fDataSize;
+    short imported_peaks[256][16384]; // this is actually supported channels / supported length of PXXX bank
+    short waveform[20000];
+    int nevt = 0;
+    int n_read_evts = 0;
+    int neweventId=0;
+    long devt_padding = 0; // padding for the devt struct read
+    Int_t t0_count = 0;
+    Double_t t0_lasttime = -2e6;
+    gzFile in;
+
+	in=gzopen(ipath->Data(),"rb");
+    bool run = true;
+    do
+    {
+        if (nevt%100000==0)
+        {
+            printf("on event %d\n",nevt);
+        }
+        gzread(in,&head,sizeof(EventHeader_t));
+        TotalDataSize=head.fDataSize;
+        if(MidasEventPrint && nevt >= MidasEventPrintThresh){
+            cout << "Event_HEADER " << endl;
+            cout << hex << head.fEventId << endl;
+            cout << dec << head.fTriggerMask << endl;
+            cout << dec << head.fSerialNumber << endl;
+            cout << dec << head.fTimeStamp << endl;
+            cout << dec << head.fDataSize << endl;
+        }	
+        if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
+            cout << "id";
+            cout << hex << head.fEventId << endl;
+            fwrite(&head,sizeof(EventHeader_t),1,obfile);
+            char *fData;
+            fData=(char*)malloc(head.fDataSize);
+            gzread(in,fData,head.fDataSize);
+            if(MidasEventPrint && neweventId > MidasEventPrintThresh){
+                for(size_t i=0;i<head.fDataSize;i++){
+                    cout << fData[i];			
+                }
+            }	
+            fwrite(fData,head.fDataSize,1,obfile);
+            free (fData);	
+            if(head.fEventId==0x8001)
+            {
+                endrun = head;
+                break;
             }
-            free (fData);
+        }
+        else if(head.fEventId==1){
+            //printf("This is event data\n");
+            // this is event data
+            gzread(in,&bhead,sizeof(BankHeader_t));	
+            if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                cout << "Bank_HEADER " << endl;
+                cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+                cout << dec << bhead.fFlags << endl;
+            }
+
+            TotalBankSize = bhead.fDataSize;
+            int insidecounter = 0;
+            while(TotalBankSize>0){
+                insidecounter += 1;
+                            
+                gzread(in,&bank32pils,sizeof(Bank32_t));
+                TotalBankSize-=sizeof(Bank32_t);
+                if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                    cout << "BANK " << endl;
+                    cout << bank32pils.fName[0] << bank32pils.fName[1] << bank32pils.fName[2]<< bank32pils.fName[3] << endl;
+                    cout << dec << bank32pils.fType << endl;
+                    cout << dec << bank32pils.fDataSize << endl;
+                }
+                EventBankSize = bank32pils.fDataSize;
+                if (bank32pils.fName[0]=='P' && bank32pils.fName[1]=='I')
+                {
+                    // TODO: this is a COMPLETE disaster but just happens to work. Fix it.
+                    evaggr->N = 0; // reset how many events we've processed this event
+                    int number_pils_events = bank32pils.fDataSize/sizeof(PILS_BANK);
+                    //printf("reading %d events\n",number_pils_events);
+                    for (int eye = 0; eye < number_pils_events; ++eye)
+                    {
+                        gzread(in,evinfo,sizeof(PILS_BANK));
+                        //printf("the size of a pils is %d\n",sizeof(QILS_BANK));
+                        gzseek(in,devt_padding,SEEK_CUR);
+                        //printf("channel number %i\n",evinfo->channel);
+                        TotalBankSize-=sizeof(PILS_BANK)+devt_padding;
+                        EventBankSize-=sizeof(PILS_BANK)+devt_padding;
+                        //evaggr->P[evaggr->N] = *evinfo;
+                        evaggr->P[evaggr->N].interpolation = evinfo->interpolation;
+                        evaggr->P[evaggr->N].position = (uint64_t)evinfo->position;
+                        evaggr->P[evaggr->N].width = evinfo->width;
+                        evaggr->P[evaggr->N].wavelet_start = (uint64_t)evinfo->wavelet_start;
+                        evaggr->P[evaggr->N].wavelet_stop = (uint64_t)evinfo->wavelet_stop;
+                        evaggr->P[evaggr->N].area = evinfo->area;
+                        evaggr->P[evaggr->N].peak = evinfo->peak;
+                        evaggr->P[evaggr->N].detector_id = evinfo->detector_id;
+                        for (int thing=0;thing<6;++thing)
+                        {
+                            evaggr->P[evaggr->N].integral[thing] = (uint64_t)evinfo->integral[thing];
+                        }
+                        evaggr->N += 1;
+                        n_read_evts += 1;
+                    }
+
+                                    
+                    // snag the trig bank
+                    gzread(in,&bank32trig,sizeof(Bank32_t));
+                    TotalBankSize-=sizeof(Bank32_t);
+                    EventBankSize = bank32trig.fDataSize;
+
+                    fDatatrig=(char*)malloc(bank32trig.fDataSize);
+                    //printf("data size %d\n",bank32.fDataSize);
+                    gzread(in,fDatatrig,bank32trig.fDataSize);
+                    TotalBankSize -= EventBankSize;
+                                
+                    // begin funny place between peaks and cpu
+                    while (true)
+                    {
+                        // the peaks bank should be here
+                        readval = gzread(in,&bank32,sizeof(Bank32_t));
+                        if (readval != sizeof(Bank32_t))
+                        {
+                                        printf("Found end of file in weird place... did DAQ crash?\n");
+                            run = false;
+                            break;
+                        }
+                        TotalBankSize-=sizeof(Bank32_t);
+                        EventBankSize = bank32.fDataSize;
+                        if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                          printf("Looking for cpu / peak banks\n");
+                          cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+                        }
+                        if(bank32.fName[0]=='p')
+                        {
+                            int whichpeak = atoi(&bank32.fName[1]);
+                            //printf("about to read peaks size %d\n",bank32.fDataSize);
+                            gzread(in,imported_peaks[whichpeak],bank32.fDataSize);
+                            //gzread(in,waveform,bank32.fDataSize);
+                            TotalBankSize -= EventBankSize;
+                        } else
+                        {
+                            // get the cpu bank information
+                            char *fData;
+                            fData=(char*)malloc(bank32.fDataSize);
+                            gzread(in,fData,bank32.fDataSize);
+                            TotalBankSize -= EventBankSize;
+                            free (fData);	
+                            break; // you break here because the cpu comes last
+                        }
+
+                    }
+                    if (run == false)
+                    {
+                      break;
+                    }
+                    //printf("total bank left now is %i\n",TotalBankSize);
+                    // and here is where we actually tie thangs back together
+                    int last_detnum = evaggr->P[0].detector_id;
+                    int where_in_peakbank = 0;
+                    //printf("about to stitch together %d events\n",evaggr->N);
+                    if (dump0b)
+                    {
+                        head.fDataSize = sizeof(BankHeader_t) + evaggr->N*sizeof(QILS_BANK) + bank32trig.fDataSize + 2*sizeof(Bank32_t);
+                        fwrite(&head,sizeof(EventHeader_t),1,obfile);
+                        bhead.fDataSize = evaggr->N*sizeof(QILS_BANK) + 2*sizeof(Bank32_t) + bank32trig.fDataSize;
+                        fwrite(&bhead,sizeof(BankHeader_t),1,obfile);
+                        bank32pils.fDataSize = evaggr->N*sizeof(QILS_BANK);
+                        bank32pils.fName[0]='Q';
+                        bank32pils.fName[1]='I';
+                        bank32pils.fName[2]='L';
+                        bank32pils.fName[3]='S';
+                        fwrite(&bank32pils,sizeof(Bank32_t),1,obfile);
+                    }
+                    for (size_t evtnum=0;evtnum<evaggr->N;++evtnum)
+                    {
+                        if (evaggr->N > MaxHitsPerT0)
+                        {
+                          printf("on event %d of %d\n",evtnum,evaggr->N);
+                          break;
+                          //return 0;
+                        }
+                        INT current_detnum = evaggr->P[evtnum].detector_id;
+                        if (current_detnum != last_detnum)
+                        {
+                            where_in_peakbank = 0;
+                        }
+                        else
+                        {
+                        }
+                        uint32_t wflen = evaggr->P[evtnum].wavelet_stop - evaggr->P[evtnum].wavelet_start;
+                        for (size_t wfindex=where_in_peakbank;wfindex<where_in_peakbank+wflen;++wfindex)
+                        {
+                            //printf("on index %d\n",wfindex);
+                            evaggr->wavelets[evtnum][wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
+                            waveform[wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
+                        }
+                        where_in_peakbank += wflen;
+                        last_detnum = current_detnum;
+                        //printf("made it here\n");
+
+                        // finally write to output
+                        *evinfo_proc = evaggr->P[evtnum];
+                        if (upconvert) // whether to look for clock rollovers
+                        {
+                            if (evaggr->P[evtnum].position<last_ts[current_detnum])
+                            {
+                               printf("hey i found rollover on channel %i\n",current_detnum);
+                                ts_base[current_detnum] =ts_base[current_detnum] + pow(2,NBITSCLOCK);
+                                //std::cout << "My ts base is now " << ts_base[current_detnum] << std::endl;
+                            
+                            }
+                            ts_full = ts_base[current_detnum] + evaggr->P[evtnum].position;
+                            last_ts[current_detnum] = evaggr->P[evtnum].position;
+                            evaggr->P[evtnum].position = ts_base[current_detnum] + evaggr->P[evtnum].position;
+                            evaggr->P[evtnum].wavelet_start = ts_base[current_detnum] + evaggr->P[evtnum].wavelet_start;
+                            evaggr->P[evtnum].wavelet_stop = ts_base[current_detnum] + evaggr->P[evtnum].wavelet_stop;
+                            //double poop = (double)evaggr->P[evtnum].position/0.5e9;
+                            //printf("my time in seconds is %f\n",poop);
+                        }
+                        if (dump0b)
+                        {
+                            /*
+                            if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                              printf("in the binary dump stage\n");
+                            }
+                            */
+                            if (ftoption == 2)
+                            {
+                                float ftime = digital_cfd(evaggr->wavelets[evtnum],evaggr->filtered_wavelets[evtnum],wflen,evinfo_proc->detector_id);
+                                evaggr->P[evtnum].interpolation = ftime;
+                            }
+                            fwrite(evinfo_proc,sizeof(QILS_BANK),1,obfile);
+                        }
+
+                    }
+                    if (dump0b)
+                    {
+                        fwrite(&bank32trig,sizeof(Bank32_t),1,obfile);
+                        fwrite(fDatatrig,bank32trig.fDataSize,1,obfile);
+                    }
+                    free (fDatatrig);	
+                }
+                else {
+                    printf("i am really confused about what state I am in\n");
+                }
+                if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                  printf("done with PILS bank\n");
+                }
+                break;
+            }
+                
+                    //printf("BROKEN OUT OF EVENT READ LOOP\n");
+        }
+        else {
+            fwrite(&head,sizeof(EventHeader_t),1,obfile);
+            char *fData;
+            fData=(char*)malloc(head.fDataSize);
+            gzread(in,fData,head.fDataSize);
+            if(MidasEventPrint && neweventId > MidasEventPrintThresh){
+                for(size_t i=0;i<head.fDataSize;i++){
+                    cout << fData[i];			
+                }
+            }	
+            fwrite(fData,head.fDataSize,1,obfile);
+            free (fData);	
         }
         nevt += 1;
         if (nevt>STOPatEVENT)
@@ -1834,7 +2146,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
         last_ts[i]=0;
         ts_base[i]=0;
     }
-
+    
 
     int TotalDataSize;
     int TotalBankSize; //=head.fDataSize;
@@ -1866,7 +2178,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
             cout << dec << head.fSerialNumber << endl;
             cout << dec << head.fTimeStamp << endl;
             cout << dec << head.fDataSize << endl;
-        }
+        }	
         if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
             if(head.fEventId==0x8001)
             {
@@ -1878,15 +2190,15 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];
+                    cout << fData[i];			
                 }
-            }
-            free (fData);
+            }	
+            free (fData);	
         }
         else if(head.fEventId==1){
             //printf("This is event data\n");
             // this is event data
-            gzread(in,&bhead,sizeof(BankHeader_t));
+            gzread(in,&bhead,sizeof(BankHeader_t));	
             if(MidasEventPrint && nevt > MidasEventPrintThresh){
                 cout << "Bank_HEADER " << endl;
                 cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
@@ -1897,7 +2209,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
             int insidecounter = 0;
             while(TotalBankSize>0){
                 insidecounter += 1;
-
+                            
                 gzread(in,&bank32,sizeof(Bank32_t));
                 TotalBankSize-=sizeof(Bank32_t);
                 if(MidasEventPrint && nevt > MidasEventPrintThresh){
@@ -1926,7 +2238,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                         n_read_evts += 1;
                     }
 
-
+                                    
                     // snag the trig bank
                     gzread(in,&bank32,sizeof(Bank32_t));
                     TotalBankSize-=sizeof(Bank32_t);
@@ -1937,8 +2249,8 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                     //printf("data size %d\n",bank32.fDataSize);
                     gzread(in,fData,bank32.fDataSize);
                     TotalBankSize -= EventBankSize;
-                    free (fData);
-
+                    free (fData);	
+                                
                     // begin funny place between peaks and cpu
                     while (true)
                     {
@@ -1969,7 +2281,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                             fData=(char*)malloc(bank32.fDataSize);
                             gzread(in,fData,bank32.fDataSize);
                             TotalBankSize -= EventBankSize;
-                            free (fData);
+                            free (fData);	
                             break; // you break here because the cpu comes last
                         }
 
@@ -2019,7 +2331,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                                 //printf("hey i found rollover on channel %i\n",current_detnum);
                                 ts_base[current_detnum] =ts_base[current_detnum] + pow(2,NBITSCLOCK);
                                 //std::cout << "My ts base is now " << ts_base[current_detnum] << std::endl;
-
+                            
                             }
                             ts_full = ts_base[current_detnum] + evaggr->P[evtnum].position;
                             last_ts[current_detnum] = evaggr->P[evtnum].position;
@@ -2101,7 +2413,7 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
                 }
                 break;
             }
-
+                
                     //printf("BROKEN OUT OF EVENT READ LOOP\n");
         }
         else {
@@ -2110,10 +2422,10 @@ Int_t elsa_root::execute_uac_pils(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];
+                    cout << fData[i];			
                 }
-            }
-            free (fData);
+            }	
+            free (fData);	
         }
         nevt += 1;
         if (nevt>STOPatEVENT)
@@ -2162,7 +2474,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
         //#include "RootStuff/Hist_S0DANCE_Create.C"
     }
     printf("start cevt read\n");
-
+    
 
     int TotalDataSize;
     int TotalBankSize; //=head.fDataSize;
@@ -2192,7 +2504,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
             cout << dec << head.fSerialNumber << endl;
             cout << dec << head.fTimeStamp << endl;
             cout << dec << head.fDataSize << endl;
-        }
+        }	
         if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
             if(head.fEventId==0x8001)
             {
@@ -2204,15 +2516,15 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];
+                    cout << fData[i];			
                 }
-            }
-            free (fData);
+            }	
+            free (fData);	
         }
         else if(head.fEventId==1){
             //printf("This is event data\n");
             // this is event data
-            gzread(in,&bhead,sizeof(BankHeader_t));
+            gzread(in,&bhead,sizeof(BankHeader_t));	
             if(MidasEventPrint && nevt > MidasEventPrintThresh){
                 cout << "Bank_HEADER " << endl;
                 cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
@@ -2223,7 +2535,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
             int insidecounter = 0;
             while(TotalBankSize>0){
                 insidecounter += 1;
-
+                            
                 gzread(in,&bank32,sizeof(Bank32_t));
                 TotalBankSize-=sizeof(Bank32_t);
                 if(MidasEventPrint && nevt > MidasEventPrintThresh){
@@ -2255,7 +2567,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                       printf("read the firmware events\n");
                     }
 
-
+                                    
                     // snag the trig bank
                     gzread(in,&bank32,sizeof(Bank32_t));
                     TotalBankSize-=sizeof(Bank32_t);
@@ -2265,8 +2577,8 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                     fData=(char*)malloc(bank32.fDataSize);
                     gzread(in,fData,bank32.fDataSize);
                     TotalBankSize -= EventBankSize;
-                    free (fData);
-
+                    free (fData);	
+                                
                     // begin funny place between peaks and cpu
                     while (true)
                     {
@@ -2286,7 +2598,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                             fData=(char*)malloc(bank32.fDataSize);
                             gzread(in,fData,bank32.fDataSize);
                             TotalBankSize -= EventBankSize;
-                            free (fData);
+                            free (fData);	
                             break; // you break here because the cpu comes last
                         }
 
@@ -2302,14 +2614,14 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                     {
                         if (MidasEventPrint)
                         {
-
+                            
                             if (evaggr->N > MaxHitsPerT0)
                             {
                               printf("on event %d of %d\n\n\n\n\n\n\n",evtnum,evaggr->N);
                               break;
                               //return 0;
                             }
-
+                           
                         }
                         INT current_detnum = evaggr->P[evtnum].detector_id;
                         if (current_detnum != last_detnum)
@@ -2410,7 +2722,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
                 }
                 break;
             }
-
+                
                     //printf("BROKEN OUT OF EVENT READ LOOP\n");
         }
         else {
@@ -2419,10 +2731,10 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
             gzread(in,fData,head.fDataSize);
             if(MidasEventPrint && neweventId > MidasEventPrintThresh){
                 for(size_t i=0;i<head.fDataSize;i++){
-                    cout << fData[i];
+                    cout << fData[i];			
                 }
-            }
-            free (fData);
+            }	
+            free (fData);	
         }
         nevt += 1;
         if (nevt>STOPatEVENT)
@@ -2439,7 +2751,7 @@ Int_t elsa_root::execute_uac_cevt(double interp_slope)
     if (dump0h)
     {
         //#include "RootStuff/Hist_S0DANCE_Write.C"
-      ohfile->Close();
+        ohfile->Close();
     }
     return 0;
 }
