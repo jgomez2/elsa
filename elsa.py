@@ -31,6 +31,9 @@ class Elsa:
                        # 6 = stupid code output (devt) w/ no trace
                        # 7 = stupid code output (devt) w/ one trace
                        # 8 = stupid code output (devt) w/ dual trace
+		       # 9 = UAC QILS w/o peaks
+                       # 50 = UAC PILS to QILS
+                       # 51 = UAC QILS strip the waveforms
         self.interp_slope = 1.0 # deal with UAC bug where interpolated time goes the wrong way
 
         self.MidasEventPrint = 0
@@ -237,6 +240,15 @@ def run_elsa(args):
     elif args.dtype >5 and args.dtype<9:
         print 'running in devt',args.ifname
         args.eroot.execute_devt(args.dtype)
+    elif args.dtype == 9:
+        print 'running in qils no peaks',args.ifname
+        args.eroot.execute_uac_qils(args.interp_slope,0)
+    elif args.dtype == 50:
+        print 'filtering pils',args.ifname
+        args.eroot.transcribe_uac_pils(args.interp_slope)
+    elif args.dtype == 51:
+        print 'strip wf qils',args.ifname
+        args.eroot.stripwf_uac_qils(args.interp_slope)
 
     if args.ebuild == 1:
         print 'running in chinu'
