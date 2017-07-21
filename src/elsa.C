@@ -86,6 +86,7 @@ class elsa_root {
         // functions
         Int_t execute_uac_qils(double interp_slope, bool have_peaks);
         Int_t execute_uac_pils(double interp_slope);
+	Int_t stripwf_uac_qils(double interp_slope);
         Int_t transcribe_uac_pils(double interp_slope);
         Int_t execute_uac_cevt(double interp_slope);
         Int_t execute_s0bin(Int_t calibrate_time, Int_t calibrate_energy);
@@ -2125,6 +2126,333 @@ Int_t elsa_root::transcribe_uac_pils(double interp_slope)
 }
 
 
+Int_t elsa_root::stripwf_uac_qils(double interp_slope)
+{
+    int readval = 0;
+    EventHeader_t head;	// Midas EventHeader
+    EventHeader_t endrun; // end run buffer
+    BankHeader_t bhead;		// Midas bank header
+    Bank32_t bank32;		// Midas 32bit bank
+    Bank32_t bank32trig;		// Midas 32bit bank
+    Bank32_t bank32pils;		// Midas 32bit bank
+    char *fDatatrig;
+    QILS_BANK *evinfo = new QILS_BANK();
+    QILS_BANK *evinfo_proc = new QILS_BANK(); // caen event info
+    ELSA_BANK *elsa_event = new ELSA_BANK();
+    test_struct_qils *evaggr = new test_struct_qils();
+    FILE *obfile = fopen(opath->Data(),"w");
+
+    UInt_t last_ts[MAXNDETS];
+    ULong64_t ts_base[MAXNDETS];
+    ULong64_t ts_full = 0;
+    for (int i=1;i<=MAXNDETS;++i)
+    {
+        last_ts[i]=0;
+        ts_base[i]=0;
+    }
+    
+
+    int TotalDataSize;
+    int TotalBankSize; //=head.fDataSize;
+    int EventBankSize; //=head.fDataSize;
+    short imported_peaks[256][16384]; // this is actually supported channels / supported length of PXXX bank
+    short waveform[20000];
+    int nevt = 0;
+    int n_read_evts = 0;
+    int neweventId=0;
+    long devt_padding = 0; // padding for the devt struct read
+    Int_t t0_count = 0;
+    Double_t t0_lasttime = -2e6;
+    gzFile in;
+		
+    in=gzopen(ipath->Data(),"rb");
+    bool run = true;
+    do
+    {
+        if (nevt%100000==0)
+        {
+            printf("on event %d\n",nevt);
+        }
+        gzread(in,&head,sizeof(EventHeader_t));
+        TotalDataSize=head.fDataSize;
+        if(MidasEventPrint && nevt >= MidasEventPrintThresh){
+            cout << "Event_HEADER " << endl;
+            cout << hex << head.fEventId << endl;
+            cout << dec << head.fTriggerMask << endl;
+            cout << dec << head.fSerialNumber << endl;
+            cout << dec << head.fTimeStamp << endl;
+            cout << dec << head.fDataSize << endl;
+        }	
+        if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
+            cout << "id";
+            cout << hex << head.fEventId << endl;
+            fwrite(&head,sizeof(EventHeader_t),1,obfile);
+            char *fData;
+            fData=(char*)malloc(head.fDataSize);
+            gzread(in,fData,head.fDataSize);
+            if(MidasEventPrint && neweventId > MidasEventPrintThresh){
+                for(size_t i=0;i<head.fDataSize;i++){
+                    cout << fData[i];			
+                }
+            }	
+            fwrite(fData,head.fDataSize,1,obfile);
+            free (fData);	
+            if(head.fEventId==0x8001)
+            {
+                endrun = head;
+                break;
+            }
+        }
+        else if(head.fEventId==1){
+            //printf("This is event data\n");
+            // this is event data
+            gzread(in,&bhead,sizeof(BankHeader_t));	
+            if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                cout << "Bank_HEADER " << endl;
+                cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+                cout << dec << bhead.fFlags << endl;
+            }
+
+            TotalBankSize = bhead.fDataSize;
+            int insidecounter = 0;
+            while(TotalBankSize>0){
+                insidecounter += 1;
+                            
+                gzread(in,&bank32pils,sizeof(Bank32_t));
+                TotalBankSize-=sizeof(Bank32_t);
+                if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                    cout << "BANK " << endl;
+                    cout << bank32pils.fName[0] << bank32pils.fName[1] << bank32pils.fName[2]<< bank32pils.fName[3] << endl;
+                    cout << dec << bank32pils.fType << endl;
+                    cout << dec << bank32pils.fDataSize << endl;
+                }
+		                    EventBankSize = bank32pils.fDataSize;
+                if (bank32pils.fName[0]=='Q' && bank32pils.fName[1]=='I')
+                {
+                    // TODO: this is a COMPLETE disaster but just happens to work. Fix it.
+                    evaggr->N = 0; // reset how many events we've processed this event
+                    int number_pils_events = bank32pils.fDataSize/sizeof(QILS_BANK);
+                    //printf("reading %d events\n",number_pils_events);
+                    for (int eye = 0; eye < number_pils_events; ++eye)
+                    {
+                        gzread(in,evinfo,sizeof(QILS_BANK));
+                        //printf("the size of a pils is %d\n",sizeof(QILS_BANK));
+                        gzseek(in,devt_padding,SEEK_CUR);
+                        //printf("channel number %i\n",evinfo->channel);
+                        //evaggr->P[evaggr->N] = *evinfo;
+                        evaggr->P[evaggr->N].interpolation = evinfo->interpolation;
+                        evaggr->P[evaggr->N].position = (uint64_t)evinfo->position;
+                        evaggr->P[evaggr->N].width = evinfo->width;
+                        evaggr->P[evaggr->N].wavelet_start = (uint64_t)evinfo->wavelet_start;
+                        evaggr->P[evaggr->N].wavelet_stop = (uint64_t)evinfo->wavelet_stop;
+                        evaggr->P[evaggr->N].area = evinfo->area;
+                        evaggr->P[evaggr->N].peak = evinfo->peak;
+                        evaggr->P[evaggr->N].detector_id = evinfo->detector_id;
+                        for (int thing=0;thing<6;++thing)
+                        {
+                            evaggr->P[evaggr->N].integral[thing] = (uint64_t)evinfo->integral[thing];
+                        }
+                        evaggr->N += 1;
+                        n_read_evts += 1;
+                    }
+
+                                    
+                    // snag the trig bank
+                    gzread(in,&bank32trig,sizeof(Bank32_t));
+                    TotalBankSize-=sizeof(Bank32_t);
+                    EventBankSize = bank32trig.fDataSize;
+
+                    fDatatrig=(char*)malloc(bank32trig.fDataSize);
+                    //printf("data size %d\n",bank32.fDataSize);
+                    gzread(in,fDatatrig,bank32trig.fDataSize);
+                    TotalBankSize -= EventBankSize;
+                                
+                    // begin funny place between peaks and cpu
+                    while (true)
+                    {
+                        // the peaks bank should be here
+                        readval = gzread(in,&bank32,sizeof(Bank32_t));
+                        if (readval != sizeof(Bank32_t))
+                        {
+                                        printf("Found end of file in weird place... did DAQ crash?\n");
+                            run = false;
+                            break;
+                        }
+                        TotalBankSize-=sizeof(Bank32_t);
+                        EventBankSize = bank32.fDataSize;
+                        if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                          printf("Looking for cpu / peak banks\n");
+                          cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+                        }
+                        if(bank32.fName[0]=='p')
+                        {
+                            int whichpeak = atoi(&bank32.fName[1]);
+                            //printf("about to read peaks size %d\n",bank32.fDataSize);
+                            gzread(in,imported_peaks[whichpeak],bank32.fDataSize);
+                            //gzread(in,waveform,bank32.fDataSize);
+                            TotalBankSize -= EventBankSize;
+                        } else
+                        {
+                            // get the cpu bank information
+                            char *fData;
+                            fData=(char*)malloc(bank32.fDataSize);
+                            gzread(in,fData,bank32.fDataSize);
+                            TotalBankSize -= EventBankSize;
+                            free (fData);	
+                            break; // you break here because the cpu comes last
+                        }
+
+                    }
+                    if (run == false)
+                    {
+                      break;
+                    }
+                    //printf("total bank left now is %i\n",TotalBankSize);
+                    // and here is where we actually tie thangs back together
+                    int last_detnum = evaggr->P[0].detector_id;
+                    int where_in_peakbank = 0;
+                    //printf("about to stitch together %d events\n",evaggr->N);
+                    if (dump0b)
+                    {
+                        head.fDataSize = sizeof(BankHeader_t) + evaggr->N*sizeof(QILS_BANK) + bank32trig.fDataSize + 2*sizeof(Bank32_t);
+                        fwrite(&head,sizeof(EventHeader_t),1,obfile);
+                        bhead.fDataSize = evaggr->N*sizeof(QILS_BANK) + 2*sizeof(Bank32_t) + bank32trig.fDataSize;
+                        fwrite(&bhead,sizeof(BankHeader_t),1,obfile);
+                        bank32pils.fDataSize = evaggr->N*sizeof(QILS_BANK);
+                        bank32pils.fName[0]='Q';
+                        bank32pils.fName[1]='I';
+                        bank32pils.fName[2]='L';
+                        bank32pils.fName[3]='S';
+                        fwrite(&bank32pils,sizeof(Bank32_t),1,obfile);
+                    }
+                    for (size_t evtnum=0;evtnum<evaggr->N;++evtnum)
+                    {
+                        if (evaggr->N > MaxHitsPerT0)
+                        {
+                          printf("on event %d of %d\n",evtnum,evaggr->N);
+                          break;
+                          //return 0;
+                        }
+                        INT current_detnum = evaggr->P[evtnum].detector_id;
+                        if (current_detnum != last_detnum)
+                        {
+                            where_in_peakbank = 0;
+                        }
+                        else
+                        {
+                        }
+                        uint32_t wflen = evaggr->P[evtnum].wavelet_stop - evaggr->P[evtnum].wavelet_start;
+                        for (size_t wfindex=where_in_peakbank;wfindex<where_in_peakbank+wflen;++wfindex)
+                        {
+                            //printf("on index %d\n",wfindex);
+                            evaggr->wavelets[evtnum][wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
+                            waveform[wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
+                        }
+                        where_in_peakbank += wflen;
+                        last_detnum = current_detnum;
+                        //printf("made it here\n");
+
+                        // finally write to output
+                        *evinfo_proc = evaggr->P[evtnum];
+                        if (upconvert) // whether to look for clock rollovers
+                        {
+                            if (evaggr->P[evtnum].position<last_ts[current_detnum])
+                            {
+                               printf("hey i found rollover on channel %i\n",current_detnum);
+                                ts_base[current_detnum] =ts_base[current_detnum] + pow(2,NBITSCLOCK);
+                                //std::cout << "My ts base is now " << ts_base[current_detnum] << std::endl;
+                            
+                            }
+                            ts_full = ts_base[current_detnum] + evaggr->P[evtnum].position;
+                            last_ts[current_detnum] = evaggr->P[evtnum].position;
+                            evaggr->P[evtnum].position = ts_base[current_detnum] + evaggr->P[evtnum].position;
+                            evaggr->P[evtnum].wavelet_start = ts_base[current_detnum] + evaggr->P[evtnum].wavelet_start;
+                            evaggr->P[evtnum].wavelet_stop = ts_base[current_detnum] + evaggr->P[evtnum].wavelet_stop;
+                            //double poop = (double)evaggr->P[evtnum].position/0.5e9;
+                            //printf("my time in seconds is %f\n",poop);
+                        }
+                        if (dump0b)
+                        {
+                            /*
+                            if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                              printf("in the binary dump stage\n");
+                            }
+                            */
+                            if (ftoption == 2)
+                            {
+                                float ftime = digital_cfd(evaggr->wavelets[evtnum],evaggr->filtered_wavelets[evtnum],wflen,evinfo_proc->detector_id);
+                                evaggr->P[evtnum].interpolation = ftime;
+                            }
+                            fwrite(evinfo_proc,sizeof(QILS_BANK),1,obfile);
+                        }
+
+                    }
+                    if (dump0b)
+                    {
+                        fwrite(&bank32trig,sizeof(Bank32_t),1,obfile);
+                        fwrite(fDatatrig,bank32trig.fDataSize,1,obfile);
+                    }
+                    free (fDatatrig);	
+                } else if (bank32pils.fName[0]=='F' && bank32pils.fName[1]=='L')
+                {
+                    if(MidasEventPrint){
+                        cout << "flus size " << bank32pils.fDataSize << " of " << bhead.fDataSize << "\n";
+                    }
+                    printf("found the flush bank - end\n");
+                    char *fData;
+                    fData=(char*)malloc(bank32pils.fDataSize);
+                    gzread(in,fData,bank32pils.fDataSize);
+                    fwrite(&bank32pils,sizeof(bank32pils),1,obfile);
+                    fwrite(&fData,bank32pils.fDataSize,1,obfile);
+                    TotalBankSize -= bank32pils.fDataSize;
+                    free (fData);	
+                    run = false;
+                }
+                /*
+                else {
+                    printf("i am really confused about what state I am in\n");
+                }
+                */
+                if(MidasEventPrint && nevt > MidasEventPrintThresh){
+                  printf("done with PILS bank\n");
+                }
+                break;
+            }
+                
+                    //printf("BROKEN OUT OF EVENT READ LOOP\n");
+        }
+        else {
+            fwrite(&head,sizeof(EventHeader_t),1,obfile);
+            char *fData;
+            fData=(char*)malloc(head.fDataSize);
+            gzread(in,fData,head.fDataSize);
+            if(MidasEventPrint && neweventId > MidasEventPrintThresh){
+                for(size_t i=0;i<head.fDataSize;i++){
+                    cout << fData[i];			
+                }
+            }	
+            fwrite(fData,head.fDataSize,1,obfile);
+            free (fData);	
+        }
+        nevt += 1;
+        if (nevt>STOPatEVENT)
+        {
+            printf("stopped at event %d of %d\n",nevt,STOPatEVENT);
+            run = false;
+        }
+    } while (run);
+
+    fclose(obfile);
+    delete evinfo;
+    delete evinfo_proc;
+    delete elsa_event;
+    delete evaggr;
+    return 0;
+}
+			
+			
+			
+			
 Int_t elsa_root::execute_uac_pils(double interp_slope)
 {
     int readval = 0;
